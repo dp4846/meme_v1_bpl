@@ -5,7 +5,7 @@ Created on Wed Oct  5 10:52:48 2022
 
 @author: dean
 """
-
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io as io
@@ -16,6 +16,13 @@ from tqdm import tqdm
 import pandas as pd
 with open('./data_dir.txt', 'r') as file:
     data_dir = file.read()
+#check if processed_data folder exists, if not make it and all the other data folders
+if not os.path.exists(data_dir + '/processed_data/'):
+    os.makedirs(data_dir + '/processed_data/')
+    os.makedirs(data_dir + '/processed_data/neural_responses/')
+    os.makedirs(data_dir + '/processed_data/red_cell/')
+    os.makedirs(data_dir + '/processed_data/eig_tuning/')
+    os.makedirs(data_dir + '/processed_data/stringer_sn_covs/')
 fns = [fn for fn in os.listdir(data_dir + 'orig_stringer2019_data/') if 'natimg2800_' in fn and not 'image' in fn]
 
 for fn in (fns[:]):
