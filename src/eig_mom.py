@@ -436,7 +436,8 @@ def cvpca(resp, force_psd=False):
                           for n in range(n_neur)])
     return cvpca_eigval[::-1]
 
-#from sklearn.decomposition import PCA TODO compare
+# original stringer estimator
+#from sklearn.decomposition import PCA
 # def cvPCA(X):
 #     ''' X is 2 x stimuli x neurons '''
 #     pca = PCA(n_components=min(1024, X.shape[1])).fit(X[0].T)

@@ -7,15 +7,14 @@ import matplotlib.pyplot as plt
 import datetime
 import os
 from itertools import product
-from subprocess import check_output
+from tqdm import tqdm
+import datetime
 import sys
 sys.path.append('../../src/')
 import eig_mom as em
-from tqdm import tqdm
-import datetime
 
 with open('../../data/data_dir.txt', 'r') as file:
-    data_dir = file.read()
+    data_dir = file.read().split('/n')[0]
 raw_data_dir =  data_dir + 'orig_stringer2019_data/'
 
 #%%
@@ -193,7 +192,7 @@ for rec in tqdm(list(res_df.index.values)):
                             'pl_b2_' + trans_type + '_alpha3',]] = log_c1, alpha_1, b2[0], alpha_2,  b2[1], alpha_3
         print('finished pl_b2')
 
-    res_df.to_csv('str_pt_estimates_all.csv')
+    res_df.to_csv('str_pt_estimates.csv')
 
 
 

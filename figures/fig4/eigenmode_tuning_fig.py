@@ -10,6 +10,15 @@ orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
 #%% 
+rf_pos_labs = {'ms_natimg2800_M160825_MP027_2016-12-14':[30, 90],
+ 'ms_natimg2800_M161025_MP030_2017-05-29':[90, 150],
+ 'ms_natimg2800_M170604_MP031_2017-06-28':[90, 150],
+ 'ms_natimg2800_M170714_MP032_2017-08-07':[30, 90],
+ 'ms_natimg2800_M170714_MP032_2017-09-14':[90, 150],
+ 'ms_natimg2800_M170717_MP033_2017-08-20':[90, 150],
+ 'ms_natimg2800_M170717_MP034_2017-09-11':[90, 150]}#figured out where to cut off RF by eye
+
+
 fns = [data_dir + 'xr_conv/' + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
 fn = 'ms_natimg2800_M170717_MP033_2017-08-20'
 fn = fn.split('/')[-1].split('.')[0]
@@ -35,8 +44,6 @@ n_ims= 100
 #eigenvectors, eigenmode tuning and linear component (5a-b)
 nrows = 4
 resp = []
-
-
 for k in tqdm(range(nrows)):
     ms_lr = (l_r[k][np.newaxis].T-l_r[k].mean()).squeeze()
     beta = np.linalg.lstsq(ms_lr[:, np.newaxis], v_r_stim[:,k], rcond=None)[0]
@@ -124,13 +131,7 @@ plt.savefig('PCA_example'+fn+'.png',
                                 dpi=2000)
 #%% fig 4F other example population linear receptive fields
 fn_labs = [_.split('/')[-1].split('.')[0] for _ in fns]
-rf_pos_labs = {'ms_natimg2800_M160825_MP027_2016-12-14':[30, 90],
- 'ms_natimg2800_M161025_MP030_2017-05-29':[90, 150],
- 'ms_natimg2800_M170604_MP031_2017-06-28':[90, 150],
- 'ms_natimg2800_M170714_MP032_2017-08-07':[30, 90],
- 'ms_natimg2800_M170714_MP032_2017-09-14':[90, 150],
- 'ms_natimg2800_M170717_MP033_2017-08-20':[90, 150],
- 'ms_natimg2800_M170717_MP034_2017-09-11':[90, 150]}#figured out where to cut off RF by eye
+
 #%% fig 4F other example population linear receptive fields
 fig, axs = plt.subplots(7, 30, figsize=(8,2))
 for i, _ in enumerate(fns):
