@@ -5,11 +5,12 @@ import os
 import scipy.io as sio
 import xarray as xr
 from tqdm import tqdm
+
 data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
-#%% 
+
 rf_pos_labs = {'ms_natimg2800_M160825_MP027_2016-12-14':[30, 90],
  'ms_natimg2800_M161025_MP030_2017-05-29':[90, 150],
  'ms_natimg2800_M170604_MP031_2017-06-28':[90, 150],
@@ -18,6 +19,7 @@ rf_pos_labs = {'ms_natimg2800_M160825_MP027_2016-12-14':[30, 90],
  'ms_natimg2800_M170717_MP033_2017-08-20':[90, 150],
  'ms_natimg2800_M170717_MP034_2017-09-11':[90, 150]}#figured out where to cut off RF by eye
 
+#%%
 
 fns = [data_dir + 'xr_conv/' + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
 fn = 'ms_natimg2800_M170717_MP033_2017-08-20'
@@ -39,8 +41,8 @@ imgs = imgs[..., img_order]
 #%%
 #get percent negative loadings of first eigenvector
 print('Percent negative loadings of first eigenvector: ' + str(np.round(np.sum(v_r_neur[:,0]>0)/len(v_r_neur[:,0])*100, 2)) + '%')
-#%%
-n_ims= 100
+#%% fig 4a-b
+n_ims = 100
 #eigenvectors, eigenmode tuning and linear component (5a-b)
 nrows = 4
 resp = []

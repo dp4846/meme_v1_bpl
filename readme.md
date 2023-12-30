@@ -89,11 +89,11 @@ no _data files, uses results from Figure 4: `'eigenmode_tuning_data.py'` saved t
 I am currently just making sure all figures can be made and noting where data should be coming from and putting it all into _data files. text with a check box is a todo item.
 
 - [X] replace figure 5 with new figure.
-- [ ] supplementary figure  of population SNR differences.
+- [X] supplementary figure  of population SNR differences (just used summary stats).
 - [ ] supplementary figure of gabor regression for neurons and PCs.
-- [ ] choose one normalization method, scale by var for example.
-- [ ] put src test into v1_bpl_sims.
-- [ ] get recording X corresponding to actual id.
-- [ ] use raw neural data recordings.
 - [ ] use correct mean subtraction method.
 - [ ] use participation ratio.
+- [ ] put src test into v1_bpl_sims.
+- [ ] choose one normalization method, scale by var for example.
+- [ ] get recording X corresponding to actual id.
+- [ ] use raw neural data recordings.

@@ -146,4 +146,40 @@ plt.ylabel('Density')
 plt.title('Eigenmode ' + str(k+1))
 plt.savefig('rec_' + fn +' pc_' + str(k) + '_loading_diff' + fn + '.pdf', bbox_inches='tight', transparent=True)
 
+# %% supplementary snr across recordings fig
+fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
+#get the ratio of the average snr of top 5 eigenvectors to the average snr of the neurons
+pc_snr = []
+neur_snr = []
+for fn in fns:
+    fn = fn.split('/')[-1].split('.')[0]
+    neur_snr.append(np.nanmean(np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy')[1]))
+    pc_snr.append(np.mean(np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[1][:10]))
+neur_snr = np.array(neur_snr)
+pc_snr = np.array(pc_snr)
+plt.figure(figsize=(3,1.5))
+#plot the ratios
+plt.scatter(range(len(neur_snr)), pc_snr/neur_snr, c='k', marker='.')
+plt.ylim(0, None)
+fn_labels = [fn.split('_')[-2] + '_' + fn.split('_')[-1].split('.')[0] for fn in fns]
+plt.xticks(range(len(fn_labels)), fn_labels, rotation=90, ha='left', fontsize=8)
+plt.ylabel('Ratio of top 10 PCs \n to single neuron \n average SNR')
+plt.xlabel('Recording')
+#% print the average of the ratios
+print(np.mean(pc_snr/neur_snr))
+print(np.min(pc_snr/neur_snr))
+# %%
+#plot the pc_snrs for all recordings on the same plot wiht semilogx
+plt.figure(figsize=(3,1.5))
+pc_snrs = []
+for fn in fns:
+    fn = fn.split('/')[-1].split('.')[0]
+    pc_snr = np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[1]
+    pc_snrs.append(pc_snr[:1000])
+    plt.plot(range(1,1+len(pc_snr)), pc_snr, c='gray', alpha=0.5)
+plt.semilogx()
+plt.xlabel('Eigenvector index')
+plt.ylabel('SNR')
+pc_snrs = np.array(pc_snrs)
+plt.plot(range(1,1001), np.mean(pc_snrs, 0), c='k')
 # %%
