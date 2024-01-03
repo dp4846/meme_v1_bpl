@@ -6,7 +6,7 @@ import os
 import scipy.io as sio
 import pandas as pd
 import scipy.stats as stats
-
+import xarray as xr
 data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
@@ -182,4 +182,71 @@ plt.xlabel('Eigenvector index')
 plt.ylabel('SNR')
 pc_snrs = np.array(pc_snrs)
 plt.plot(range(1,1001), np.mean(pc_snrs, 0), c='k')
-# %%
+# %% supplementary figures for fig 5
+# performance for truncated and whole image is similar.
+gabor_r2 = xr.open_dataarray('eig_gabor_r2.nc')
+pc_r2 = xr.open_dataarray('eig_pc_r2.nc')
+
+plt.figure(figsize=(4,2))
+dim = pc_r2.coords['dim']
+plt.plot(dim, pc_r2.sel(rf_type='truncated', var_stab=False).mean(('pc', 'rec')),
+                label='Cropped image', marker='.')
+plt.plot(dim, pc_r2.sel(rf_type='whole', var_stab=False).mean(('pc', 'rec')), 
+                label='Whole image', marker='.', c='orange')
+plt.ylim(0,0.25)
+plt.semilogx()
+plt.xlim(1,1e3)
+plt.xlabel('Number of image PCs')
+plt.ylabel(r'Fraction linear variance $(R^2)$')
+#set regular ticks at dims
+plt.xticks(dim.values, dim.values, rotation=0)
+#remove small ticks
+plt.gca().tick_params(which='minor', length=0)
+plt.legend()
+plt.title('Avg. top ten eigenmode linearity \n across recordings')
+plt.savefig('pc_r2_saturation.pdf', bbox_inches='tight', transparent=True)
+
+#%% plot of gabor vs pc performance across eigenmodes and recordings.
+gabor_r2 = xr.open_dataarray('eig_gabor_r2.nc')
+pc_r2 = xr.open_dataarray('eig_pc_r2.nc')
+pc_r2 = pc_r2.sel(dim=512, rf_type='truncated', var_stab=False)
+gabor_r2 = gabor_r2.sel(var_stab=False)
+gabor_r2 = gabor_r2.squeeze().drop('var_stab')
+pc_r2 = pc_r2.squeeze().drop(('dim','var_stab', 'rf_type'))
+r2 = xr.concat((gabor_r2, pc_r2), 'model')
+r2.coords['model'] = ['Gabor', 'PC']
+
+fig, ax = plt.subplots(2,4, figsize=(8,4),)
+ymax = 1.0
+for i, rec in enumerate(r2.coords['rec'].values):
+    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='Gabor'), marker='.', label='Gabor filters', c='b', alpha=0.5)
+    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='PC'), marker='.', label='Image PCs', c='orange', alpha=0.5)
+    ax[i//4, i%4].set_ylim(0, ymax)
+    ax[i//4, i%4].set_xticks([1,5,10])
+    #set yticks 
+    ax[i//4, i%4].set_yticks([0, 0.25, 0.5, 0.75, 1], [0, '', 0.5, '', 1])
+
+    
+    ax[i//4, i%4].set_title(rec.split('00_')[-1], fontsize=8)
+    if i==0:
+        ax[i//4, i%4].set_ylabel(r'$R^2$')
+        ax[i//4, i%4].set_xlabel('Eigenmode index')
+    else:
+        ax[i//4, i%4].set_yticklabels([])
+        ax[i//4, i%4].set_xticklabels([])
+
+ax[0,0].legend(loc='upper right', framealpha=1, fontsize=10)
+#remove ticks and labels
+ax[-1,-1].set_xticks([])
+ax[-1,-1].set_yticks([])
+#remove spines all
+ax[-1,-1].spines['top'].set_visible(False)
+ax[-1,-1].spines['right'].set_visible(False)
+ax[-1,-1].spines['bottom'].set_visible(False)
+ax[-1,-1].spines['left'].set_visible(False)
+
+plt.tight_layout()
+plt.savefig('gabor_compared_to_pc.pdf', bbox_inches='tight', transparent=True)
+# %% get max difference between gabor and pc
+diff = r2.sel(model='Gabor') - r2.sel(model='PC')
+print(diff.max())
