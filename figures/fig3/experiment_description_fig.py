@@ -23,7 +23,7 @@ rf_coords = {'ms_natimg2800_M160825_MP027_2016-12-14':[(25, 65), (35, 85)],
             'ms_natimg2800_M170604_MP031_2017-06-28':[(25, 65), (90, 135)],
             'ms_natimg2800_M170714_MP032_2017-08-07':[(20, 55), (20, 60)],
             'ms_natimg2800_M170714_MP032_2017-09-14':[(10, 45), (90, 130)],
-            'ms_natimg2800_M170717_MP033_2017-08-20':[(5, 50), (90, 150)],
+            'ms_natimg2800_M170717_MP033_2017-08-20':[(5, 60), (90, 150)],
             'ms_natimg2800_M170717_MP034_2017-09-11':[(20, 60), (90, 135)]}
 #%% load neural responses and images
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
