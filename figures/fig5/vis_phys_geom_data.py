@@ -5,7 +5,24 @@ import scipy.io as sio
 import os 
 from sklearn.decomposition import TruncatedSVD
 import matplotlib.pyplot as plt
+def noise_corr_R2(X, Y, noise_corrected=True):
+    #X is observation x feature
+    #Y is repeat x observation X neuron
+    K, M, N = Y.shape
+    M, D = X.shape
+    Y_m = Y.mean(0)
+    Y_m = Y_m - Y_m.mean(0, keepdims=True)#subtract mean response (could include intercept in model)
+    hat_beta = np.linalg.lstsq(X, Y_m, rcond=None)[0]#regression of PCs of images on single units
+    hat_r = X @ hat_beta#predicted responses from linear transform of images
+    rss = ((Y_m - hat_r)**2).sum(0)/(M-D)#residual sum of squares
+    var_r = Y_m.var(0, ddof=1) #estimate total variance of responses
+    linear_var = var_r - rss #estimate of linear variance by subtracting residual variance from total variance
 
+    if noise_corrected:
+        S_var = (var_r - Y.var(0, ddof=1,).mean(0)/K)#signal variance
+        return linear_var / S_var
+    else:
+        return linear_var / var_r
 def hat_snr(x, noise_corrected=True):
     #x is a 2d array of shape (n_rep, n_stim, ...)
     n_rep, n_stim = x.shape[:2]
@@ -67,6 +84,14 @@ def make_gabor_filters(img_size=60, scales=[1, 0.5, 0.25, ], thetas=[0., 0.78, 1
     print('number of gabors: ' + str(len(filters_gabor)))
     return filters_gabor, gab_inds
 
+rf_coords = {'ms_natimg2800_M160825_MP027_2016-12-14':[(25, 65), (35, 85)],
+             'ms_natimg2800_M161025_MP030_2017-05-29':[(25, 65), (95, 145)],
+            'ms_natimg2800_M170604_MP031_2017-06-28':[(25, 65), (90, 135)],
+            'ms_natimg2800_M170714_MP032_2017-08-07':[(20, 55), (20, 60)],
+            'ms_natimg2800_M170714_MP032_2017-09-14':[(10, 45), (90, 130)],
+            'ms_natimg2800_M170717_MP033_2017-08-20':[(5, 60), (90, 150)],
+            'ms_natimg2800_M170717_MP034_2017-09-11':[(20, 60), (90, 135)]}
+
 data_dir = '/scratch/gpfs/dp4846/stringer_2019/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
@@ -106,22 +131,32 @@ for rec in tqdm(range(len(fns))):
     np.save(eig_tuning_dir + 'neur_snr_' + fn + '.npy', snr_neurs)
     np.save(eig_tuning_dir + 'pc_snr_' + fn + '.npy', snrs_pc_train_split)
 
-# %% eig r2 with linear filters
+# %% eig and neur r2 with linear filters effect of dimensionality and stimuli truncation
 n_eigenmodes = 10
 dims = [2, 4, 8, 32, 64, 128, 256, 512]
+dim_filter_basis = np.max(dims)
 data = np.zeros((len(fns), len(dims), 2, 2, n_eigenmodes))
+fn_labels = [fn.split('/')[-1].split('.')[0] for fn in fns]
+
 eig_pc_r2 = xr.DataArray(data, dims=['rec', 'dim', 'var_stab', 'rf_type', 'pc'],
-                    coords={'rec':fns,
+                    coords={'rec':fn_labels,
                             'dim':dims,
                             'var_stab':[True, False],
                             'rf_type':['whole', 'truncated'],
                             'pc':np.arange(n_eigenmodes)})
 imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
-for fn in tqdm(eig_pc_r2.coords['rec']):
-    fn = fn.values.item()
+for rec in tqdm(range(len(fns))):
+    fn = fns[rec]
     r = xr.open_dataset(fn)['resp']
-    for rf_type in eig_pc_r2.coords['rf_type']:
-        rf_type = rf_type.values.item()
+    n_rep, n_stim, n_neur = r.shape
+    # create neuron dataarray
+    neur_pc_r2 = xr.DataArray(np.zeros((len(dims), 2, 2, n_neur)), 
+                              dims=['dim', 'var_stab', 'rf_type', 'unit'], 
+                              coords={'dim':dims,
+                                    'var_stab':[True, False],
+                                    'rf_type':['whole', 'truncated'],
+                                    'unit':np.arange(n_neur)})
+    for rf_type in ['whole', 'truncated']:
         if rf_type=='whole':
             imgs_exp = imgs[:, :, r.coords['stim'].values]
         else:
@@ -134,52 +169,63 @@ for fn in tqdm(eig_pc_r2.coords['rec']):
         u_im, s_im, v_im = np.linalg.svd(S, full_matrices=True)#PCA of images
         filter_pc = v_im[:dim_filter_basis].reshape((dim_filter_basis,) + (n_rows, n_cols))
         filter_resp = np.einsum('ijk,ljk->il', imgs_exp, filter_pc)
-        for var_stab in eig_pc_r2.coords['var_stab']:
-            var_stab = var_stab.values.item()
-            u_r_stim = np.load(eig_tuning_dir + 'sp_cov_stim_u_r_' + fn.split('/')[-1].split('.')[0] + '.npy')[:, :n_eigenmodes]
+        for var_stab in [True, False]:
+            u_r_stim = np.load(eig_tuning_dir + 'sp_cov_stim_u_r_' + fn_labels[rec] + '.npy')[:, :n_eigenmodes]
+            Y = r.transpose('rep', 'stim', 'unit').values
             if var_stab:
                 u_r_stim = (u_r_stim - u_r_stim.min(0, keepdims=True))**0.5
-                u_r_stim = u_r_stim - u_r_stim.mean(0, keepdims=True)
-            for dim in eig_pc_r2.coords['dim']:
-                dim = dim.values.item()
+                Y = (Y - Y.min(0, keepdims=True))**0.5
+            for dim in dims:
                 r2 = noise_corr_R2(filter_resp[:, :dim], u_r_stim[None], noise_corrected=False)
-                eig_pc_r2.loc[{'rec':fn, 'dim':dim, 'var_stab':var_stab, 'rf_type':rf_type}] = r2
-eig_pc_r2.to_netcdf(eig_tuning_dir + 'eig_tuning_r2.nc')
+                eig_pc_r2.loc[{'rec':fn.split('/')[-1].split('.')[0], 'dim':dim, 'var_stab':var_stab, 'rf_type':rf_type}] = r2
+                r2 = noise_corr_R2(filter_resp[:, :dim], Y, noise_corrected=True)
+                neur_pc_r2.loc[{'dim':dim, 'var_stab':var_stab, 'rf_type':rf_type}] = r2
+    neur_pc_r2.to_netcdf(eig_tuning_dir + 'neur_pc_r2_' + fn_labels[rec] + '.nc')
+eig_pc_r2.to_netcdf(eig_tuning_dir + 'eig_pc_r2.nc')
 
 #%%  find performance of gabor and their energy for each eigenmode
-da_gabor_r2 = xr.DataArray(np.zeros((len(fns), 2, n_eigenmodes)), dims=['rec', 'var_stab', 'pc'],
-                    coords={'rec':fns,
+fn_labels = [fn.split('/')[-1].split('.')[0] for fn in fns]
+n_eigenmodes = 10
+eig_gabor_r2 = xr.DataArray(np.zeros((len(fns), 2, n_eigenmodes)), dims=['rec', 'var_stab', 'pc'],
+                    coords={'rec':fn_labels,
                             'var_stab':[True, False],
                             'pc':np.arange(n_eigenmodes)})
 imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
-for rec in tqdm(range(len(fns))):
+for rec in tqdm(range(len(fns))): 
     fn = fns[rec].split('/')[-1].split('.')[0]
     (r1, r2), (c1, c2) = rf_coords[fn]
-    #get max distance from center
     max_dist = np.max([r2-r1, c2-c1])
-
     filters_gabor, gab_inds = make_gabor_filters(img_size=max_dist)
     r = xr.open_dataset(fns[rec])['resp']
+
     imgs_exp = imgs[r2-max_dist:r2, c2-max_dist:c2, r.coords['stim'].values]#get the images in order to correspond to the responses
     imgs_exp = imgs_exp.transpose((-1,0,1))
-
     filters_gabor = np.concatenate((np.ones((1, max_dist, max_dist)), filters_gabor), 0)
     filter_resp = np.einsum('ijk,ljk->il', imgs_exp, filters_gabor)
-    #get squared response
     filter_resp_sq = filter_resp**2
-    #now concatenate the original and squared features
     filters_gabor_resp = np.concatenate((filter_resp, filter_resp_sq), 1)
-    for var_stab in da_gabor_r2.coords['var_stab']:
+
+    n_rep, n_stim, n_neur = r.shape
+
+    neur_gabor_r2 = xr.DataArray(np.zeros((2, n_neur)), dims=['var_stab', 'unit'],
+                    coords={'var_stab':[True, False],
+                            'unit':np.arange(n_neur)})
+
+    for var_stab in eig_gabor_r2.coords['var_stab']:
         var_stab = var_stab.values.item()
+        u_r_stim = np.load(eig_tuning_dir + 'sp_cov_stim_u_r_' + fn + '.npy')[:, :n_eigenmodes]
+        Y = r.transpose('rep', 'stim', 'unit').values
         if var_stab:
-            u_r_stim = np.load(eig_tuning_dir + 'sp_cov_stim_u_r_' + fn + '.npy')[:, :n_eigenmodes]
             u_r_stim = (u_r_stim - u_r_stim.min(0, keepdims=True))**0.5
             u_r_stim = u_r_stim - u_r_stim.mean(0, keepdims=True)
-        else:
-            u_r_stim = np.load(eig_tuning_dir + 'sp_cov_stim_u_r_' + fn + '.npy')[:, :n_eigenmodes]
+            Y = (Y - Y.min(0, keepdims=True))**0.5
         r2 = noise_corr_R2(filters_gabor_resp, u_r_stim[None], noise_corrected=False)
-        da_gabor_r2.loc[{'rec':fn, 'var_stab':var_stab}] = r2
-
+        eig_gabor_r2.loc[{'rec':fn, 'var_stab':var_stab}] = r2
+        r2 = noise_corr_R2(filters_gabor_resp, Y, noise_corrected=True)
+        neur_gabor_r2.loc[{'var_stab':var_stab}] = r2
+        
+    neur_gabor_r2.to_netcdf(eig_tuning_dir + 'neur_gabor_r2_' + fn + '.nc')
+eig_gabor_r2.to_netcdf(eig_tuning_dir + 'eig_gabor_r2.nc')
 # %% plots of 32 gabor filters
 # Select the first 32 images
 filters_gabor, gab_inds = make_gabor_filters()
