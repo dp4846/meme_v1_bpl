@@ -15,24 +15,34 @@ eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
 #example plots 
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
 fn = 'ms_natimg2800_M170717_MP033_2017-08-20'#example recording
-fn = fns[5]
+#fn = fns[rec]
 fn = fn.split('/')[-1].split('.')[0]
-neur_snr = np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy')[1]#TODO fix this
-pc_snr = np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[1]
-r2s_pc = np.load(eig_tuning_dir + 'lin_r2_pc_' + fn + '.npy')
-r2s_neur = np.load(eig_tuning_dir + 'lin_r2_neur' + fn + '.npy')
+neur_snr = np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy')
+pc_snr = np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')
+# r2s_pc = np.load(eig_tuning_dir + 'lin_r2_pc_' + fn + '.npy')
+# r2s_neur = np.load(eig_tuning_dir + 'lin_r2_neur' + fn + '.npy')
+neur_pc_r2 = xr.open_dataarray(eig_tuning_dir + 'neur_pc_r2_' + fn + '.nc')
+eig_pc_r2 = xr.open_dataarray(eig_tuning_dir + 'eig_pc_r2.nc')
+neur_gabor_r2 = xr.open_dataarray(eig_tuning_dir + 'neur_gabor_r2_' + fn + '.nc')
+eig_gabor_r2 = xr.open_dataarray(eig_tuning_dir + 'eig_gabor_r2.nc')
+
+neur_pc_r2 = neur_pc_r2.sel(dim=256, rf_type='truncated', var_stab=False).squeeze().drop(('dim','var_stab', 'rf_type'))
+eig_pc_r2 = eig_pc_r2.sel(dim=256, rf_type='truncated', var_stab=False, rec=fn).squeeze().drop(('dim','var_stab', 'rf_type', 'rec'))
+neur_gabor_r2 = neur_gabor_r2.sel(var_stab=False).squeeze().drop('var_stab')
+eig_gabor_r2 = eig_gabor_r2.sel(var_stab=False, rec=fn).squeeze().drop(('var_stab', 'rec'))
 thresh=0.1
 ind = neur_snr>thresh
-neur_snr_thresh = neur_snr[ind]
-r2s_neur_thresh = r2s_neur[ind]
+neur_pc_r2_good = neur_pc_r2[ind]
+neur_gabor_r2_good = neur_gabor_r2[ind]
 
-#%% fig 5a
+
+# fig 5a
 plt.figure(figsize=(4,2))
 xticks = [1, 10, 100, 1000]
 plt.subplot(121)
-plt.plot(range(1,1+len(pc_snr)), pc_snr, c='grey', label='Eigenvector (lower bound)')
+plt.plot(range(1,1+len(pc_snr)), pc_snr, c='k', label='Eigenvector (lower bound)')
 
-plt.plot([0,5000], [np.nanmean(neur_snr),]*2, c='k', 
+plt.plot([1,5e3], [np.nanmean(neur_snr),]*2, c='k', ls ='--', 
                             label='Neuron average (noise corrected)')
 # plot the 95% quantiles of neuron snr
 plt.fill_between(range(1, 5000), np.nanquantile(neur_snr, 0.025, axis=0), 
@@ -44,30 +54,41 @@ plt.semilogx()
 
 plt.ylabel('SNR')
 plt.xticks(xticks)
-plt.xlim(0, 5000)
-plt.xlabel('Eigenvector index')
+plt.xlim(0.5, 5e3)
+plt.xlabel('Eigenmode rank')
 plt.gca().spines['top'].set_visible(False)
 plt.gca().spines['right'].set_visible(False)
 # fig 5b
 plt.subplot(122)
-plt.plot(range(1,1+len(r2s_pc)), r2s_pc, c='grey', label='Eigenvector',)
-plt.plot([0,5000], [np.nanmean(r2s_neur_thresh),]*2, c='k', 
-                            label='Neuron average (noise corrected)')
-# plot the 95% quantiles of neuron snr
-plt.fill_between(range(1, 5000), np.nanquantile(r2s_neur_thresh, 0.025, axis=0), 
-                np.nanquantile(r2s_neur_thresh, 0.975, axis=0), color='k', alpha=0.2, label='Single neuron 95% quantile')
-plt.semilogx()
+# plot eigenmode tuning linear fit
+plt.plot(range(1,1+len(eig_pc_r2)), eig_pc_r2, c='k', marker='.',label='Image PC fit')
+# TODO  plot eigenmode tuning gabor fit
+plt.plot(range(1,1+len(eig_gabor_r2)), eig_gabor_r2, c='blue', marker='.',label='Gabor fit')
+
+# plot neuron tuning linear fit average and 95% quantiles
+plt.plot([1, 10], [np.nanmean(neur_pc_r2_good),]*2, c='k', 
+                            label='Neuron average (noise corrected)', ls='--')
+plt.fill_between(range(1, 11), np.nanquantile(neur_pc_r2_good, 0.025, axis=0), 
+                np.nanquantile(neur_pc_r2_good, 0.975, axis=0), color='k', alpha=0.2, label='Single neuron 95% quantile')
+# TODO plot neuron tuning gabor fit average and 95% quantiles
+plt.plot([1, 10], [np.nanmean(neur_gabor_r2_good),]*2, c='green', 
+                            label='Neuron average (noise corrected)', ls='--')
+plt.fill_between(range(1, 11), np.nanquantile(neur_gabor_r2_good, 0.025, axis=0), 
+                np.nanquantile(neur_gabor_r2_good, 0.975, axis=0), color='green', 
+                alpha=0.2, label='Single neuron 95% quantile', )
+
+
+#plt.semilogx()
 #remove spines in upper left and righ
 plt.gca().spines['top'].set_visible(False)
 plt.gca().spines['right'].set_visible(False)
 plt.ylim(-0.1,1)
-plt.xticks(xticks)
-plt.xlim(0, 5000)
+plt.xticks(np.arange(1,11))
+plt.xlim(0, 11)
 plt.yticks([0,0.25, 0.5,0.75,1])
 plt.gca().set_yticklabels(['0', '', '0.5', '', '1'])
-plt.gca().set_xticklabels([])
-#plt.legend(title='Fraction linear variance', loc=(1.05, 0.05), framealpha=1)
-plt.ylabel(r'Linearity $(R^2)$') 
+plt.gca().set_xticklabels(['1',] + ['',]*3 + ['5',] + ['',]*4 + ['10'])
+plt.ylabel('Fraction variance \n' r'explained $(R^2)$') 
 plt.annotate(fn.split('_')[3] + '_' + fn.split('_')[4], (0.01, 0.02), xycoords='axes fraction', fontsize=3)
 plt.tight_layout()
 plt.savefig('./r2_' + fn + '.pdf', bbox_inches='tight', transparent=True)
@@ -107,10 +128,9 @@ for k, fn in enumerate(tagged_fns):
     for i, j in enumerate(range(ind[0], ind[1])):
         plt.plot([j, j], [prop_is_neg_red[i], prop_is_neg_nonred[i]], color='k', alpha=0.2)
     crit = (p<crit_p)
-    plt.scatter(np.where(crit)[0] + ind[0], prop_is_neg_red[crit],color='green', marker='x', zorder=10)
+    plt.scatter(np.where(crit)[0] + ind[0], prop_is_neg_red[crit],color='green', marker='.', zorder=10)
 
-
-rec_dates = ['2017-09-14', '2017-06-28', '2017-08-07']
+rec_dates = [ fn.split('_')[-1] for fn in tagged_fns]
 plt.xticks([0, 21, 42,], rec_dates, rotation=0, ha='left', fontsize=8)
 plt.grid()
 plt.ylim(0,1)
@@ -144,6 +164,8 @@ plt.grid()
 plt.xlabel('Eigenmode neural loading')
 plt.ylabel('Density')
 plt.title('Eigenmode ' + str(k+1))
+plt.annotate(fn.split('_')[3] + '_' + fn.split('_')[4], (0.01, 0.02), xycoords='axes fraction', fontsize=3
+            )
 plt.savefig('rec_' + fn +' pc_' + str(k) + '_loading_diff' + fn + '.pdf', bbox_inches='tight', transparent=True)
 
 # %% supplementary snr across recordings fig
@@ -153,8 +175,8 @@ pc_snr = []
 neur_snr = []
 for fn in fns:
     fn = fn.split('/')[-1].split('.')[0]
-    neur_snr.append(np.nanmean(np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy')[1]))
-    pc_snr.append(np.mean(np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[1][:10]))
+    neur_snr.append(np.nanmean(np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy')))
+    pc_snr.append(np.mean(np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[:10]))
 neur_snr = np.array(neur_snr)
 pc_snr = np.array(pc_snr)
 plt.figure(figsize=(3,1.5))
@@ -174,7 +196,7 @@ plt.figure(figsize=(3,1.5))
 pc_snrs = []
 for fn in fns:
     fn = fn.split('/')[-1].split('.')[0]
-    pc_snr = np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')[1]
+    pc_snr = np.load(eig_tuning_dir + 'pc_snr_' + fn + '.npy')
     pc_snrs.append(pc_snr[:1000])
     plt.plot(range(1,1+len(pc_snr)), pc_snr, c='gray', alpha=0.5)
 plt.semilogx()
@@ -209,8 +231,8 @@ plt.savefig('pc_r2_saturation.pdf', bbox_inches='tight', transparent=True)
 #%% plot of gabor vs pc performance across eigenmodes and recordings.
 gabor_r2 = xr.open_dataarray('eig_gabor_r2.nc')
 pc_r2 = xr.open_dataarray('eig_pc_r2.nc')
-pc_r2 = pc_r2.sel(dim=512, rf_type='truncated', var_stab=False)
-gabor_r2 = gabor_r2.sel(var_stab=False)
+pc_r2 = pc_r2.sel(dim=512, rf_type='truncated', var_stab=True)
+gabor_r2 = gabor_r2.sel(var_stab=True)
 gabor_r2 = gabor_r2.squeeze().drop('var_stab')
 pc_r2 = pc_r2.squeeze().drop(('dim','var_stab', 'rf_type'))
 r2 = xr.concat((gabor_r2, pc_r2), 'model')
@@ -219,15 +241,15 @@ r2.coords['model'] = ['Gabor', 'PC']
 fig, ax = plt.subplots(2,4, figsize=(8,4),)
 ymax = 1.0
 for i, rec in enumerate(r2.coords['rec'].values):
-    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='Gabor'), marker='.', label='Gabor filters', c='b', alpha=0.5)
-    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='PC'), marker='.', label='Image PCs', c='orange', alpha=0.5)
+    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='Gabor'), marker='.', label='Simple + complex', c='g', alpha=0.5)
+    ax[i//4, i%4].plot(r2.coords['pc']+1, r2.sel(rec=rec, model='PC'), marker='.', label='Linear', c='k', alpha=0.5)
     ax[i//4, i%4].set_ylim(0, ymax)
     ax[i//4, i%4].set_xticks([1,5,10])
     #set yticks 
     ax[i//4, i%4].set_yticks([0, 0.25, 0.5, 0.75, 1], [0, '', 0.5, '', 1])
 
     
-    ax[i//4, i%4].set_title(rec.split('00_')[-1], fontsize=8)
+    ax[i//4, i%4].set_title(rec.split('_')[-2] + ' '+ rec.split('_')[-1] , fontsize=10)
     if i==0:
         ax[i//4, i%4].set_ylabel(r'$R^2$')
         ax[i//4, i%4].set_xlabel('Eigenmode index')
@@ -235,7 +257,7 @@ for i, rec in enumerate(r2.coords['rec'].values):
         ax[i//4, i%4].set_yticklabels([])
         ax[i//4, i%4].set_xticklabels([])
 
-ax[0,0].legend(loc='upper right', framealpha=1, fontsize=10)
+ax[0,0].legend(loc='upper right', framealpha=1, fontsize=8, title='Model')
 #remove ticks and labels
 ax[-1,-1].set_xticks([])
 ax[-1,-1].set_yticks([])
