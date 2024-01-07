@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import xarray as xr
 from tqdm import tqdm
@@ -92,7 +93,8 @@ rf_coords = {'ms_natimg2800_M160825_MP027_2016-12-14':[(25, 65), (35, 85)],
             'ms_natimg2800_M170717_MP033_2017-08-20':[(5, 60), (90, 150)],
             'ms_natimg2800_M170717_MP034_2017-09-11':[(20, 60), (90, 135)]}
 
-data_dir = '/scratch/gpfs/dp4846/stringer_2019/'
+#data_dir = '/scratch/gpfs/dp4846/stringer_2019/'
+data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
@@ -100,7 +102,7 @@ eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn]
 imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
 sub_sample = 1
-
+#%%
 # %% SNR estimation for eigs and neurons
 for rec in tqdm(range(len(fns))):
     da = xr.open_dataset(fns[rec])
@@ -229,14 +231,14 @@ eig_gabor_r2.to_netcdf(eig_tuning_dir + 'eig_gabor_r2.nc')
 # %% plots of 32 gabor filters
 # Select the first 32 images
 filters_gabor, gab_inds = make_gabor_filters()
-selected_images = filters_gabor[::3, :]
+selected_images = filters_gabor[::1, :]
 vmin = selected_images.min()
 vmax = selected_images.max()
 # Create a subplot grid
-num_rows = 4
+num_rows = 8
 num_cols = 8
 s= 0.5
-fig, axes = plt.subplots(num_rows, num_cols, figsize=(12*s, 6*s))
+fig, axes = plt.subplots(num_rows, num_cols, figsize=(12*s, 12*s))
 # Plot each image in the grid
 for i in range(num_rows):
     for j in range(num_cols):
@@ -246,5 +248,6 @@ for i in range(num_rows):
             axes[i, j].imshow(img, cmap='gray', vmin=vmin, vmax=vmax)
             axes[i, j].axis('off')
 plt.suptitle('32 Gabor filters of ' + str(filters_gabor.shape[0]))
-plt.tight_layout()
-plt.savefig('./example_gabor_filters.pdf', dpi=300)
+
+plt.savefig('./example_gabor_filters.png', dpi=300, bbox_inches='tight', transparent=True)
+# %%
