@@ -29,8 +29,7 @@ to convert from the .mat format to xarray dataset format.
         -   ms_ is the mean subtracted responses
         -   spont_sub_ is the mean subtracted responses with spontaneous activity subtracted (see Stringer 2019)
         
-        All recordings including cell position (unsure of exact units).
-For recordings that have it, the tdtomato+ labels are also saved in a csv file in
+        All recordings including cell position and three recordings have tdtomato+ labels saved in a csv file in
 `'./stringer_2019/processed_data/red_cell/'`
 
 ### Estimating signal and noise covariance matrices
@@ -54,6 +53,7 @@ then estimates power laws using cvPCA and power laws and broken powerlaws using 
 that saves to:
 `'bpl2_sims'`
 then generates `'est_sig_eig_spec_figs.py'`
+3. `'single_neuron_lin_rf_data.py'` estimates single neuron linear RFs. These are saved to: `'./stringer_2019/processed_data/eig_tuning/'` prepended with `'neur_rf_est_'`.
 
 - [ ] where does bpl2_sims come from? these are used as CI's in Fig 3H
 I found it in parameteric_bootstrap_bpl2.py in the original eigenspectra file
@@ -71,16 +71,26 @@ I switched it to: `"{sim_dir}rec_{rec}_{nm}_pbci_pl.csv`
 
 #### Figure 4:
 
-1. `'eigenmode_tuning_data.py'` generates the data that is the basis of all Figure 4 and the neural data results in Figure 5. Because these files are large they are saved to: 
-`'./stringer_2019/processed_data/eig_tuning/'`
+1. `'eigenmode_tuning_data.py'` generates the data that is the basis of all Figure 4. Because these files are large they are saved to: 
+`'./stringer_2019/processed_data/eig_tuning/'`. These are analyses of the 7 natural image response recordings, they are prepended with the following strings:
+    - `'sp_cov_stim_u_r_` and `'sp_cov_neur_u_r_` for singular vectors of the estimated stimulus and neural signal response covariance matrices respectively.
+    - `'eig_rf_est_`, `'eig_lin_resp_'`, `'eig_pc_r2_est_'` for the top N eigenmodes these are the estimated linear RF weights, the responses of these filters, and R2 values of their predictions.
 
--   [ ] why does eig_tuning_dir + 'neur_snr_' have two rows?
--   [ ] why does eig_tuning_dir + 'pc_snr_'  have two columns?
-
+2. `'eigenmode_tuning_figs.py'` generates all the figures in Figure 4. 
 
 
 #### Figure 5:
-no _data files, uses results from Figure 4: `'eigenmode_tuning_data.py'` saved to `'./stringer_2019/processed_data/eig_tuning/'`
+1. `vis_phys_geom_data.py` calculates SNR and R2 performance of gabors and linear filters for all neurons and top eigenmode tuning curves saves to `'./stringer_2019/processed_data/eig_tuning/'` prepended with:
+    - `'neur_snr_'` and `'pc_snr_'` for SNR of neurons and PCs respectively for each recordings.
+    - R2 for linear model across a variety of conditions (image size, variance stabilization, dimensionality reduction of images):
+        - `'neur_pc_r2_'` for each recordings gives noise corrected R2 for every neuron (some are unstable for more accurate estimates filter by SNR>0.1). 
+        - `'eig_pc_r2'` is all recordings top N eigenmodes R2 but not noise corrected b/c wouldn't make a difference since these are assumed underlying signal.
+    - R2 for gabor energy model across a few conditions (image size, variance stabilization):
+        - `'neur_gabor_r2_'` for each recordings gives noise corrected R2 for every neuron (some are unstable for more accurate estimates filter by SNR>0.1). 
+        - `'eig_gabor_r2'` is all recordings top N eigenmodes R2 but not noise corrected.
+Also, plots example gabors for visualization `'example_gabor_filters.pdf'`.
+
+2. `vis_phys_geom_figs.py` generates all the figures in Figure 5 and supplementary figures.
 
 
 
@@ -89,11 +99,18 @@ no _data files, uses results from Figure 4: `'eigenmode_tuning_data.py'` saved t
 I am currently just making sure all figures can be made and noting where data should be coming from and putting it all into _data files. text with a check box is a todo item.
 
 - [X] replace figure 5 with new figure.
-- [X] supplementary figure  of population SNR differences (just used summary stats).
-- [ ] supplementary figure of gabor regression for neurons and PCs.
+- [X] supplementary figure of population SNR differences (just used summary stats).
+- [ ] supplementary figure of gabor regression for 
+    - [ ] neurons
+    - [X] PCs.
+    - [X] check if using powers of PC's can give gabor complex and simple cells (no).
+- [X] redo fig 3a-d with new figures
+- [X] redo fig 4b-d with new figures
 - [ ] use correct mean subtraction method.
 - [ ] use participation ratio.
 - [ ] put src test into v1_bpl_sims.
 - [ ] choose one normalization method, scale by var for example.
 - [ ] get recording X corresponding to actual id.
 - [ ] use raw neural data recordings.
+- [ ] put all definitions into src
+- [ ] put RFs and directories into src
