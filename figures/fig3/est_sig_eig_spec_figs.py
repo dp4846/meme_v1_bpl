@@ -49,7 +49,7 @@ raw_data = xr.open_dataset(resp_data_dir + resp_data_file)['resp']
 n_neur = raw_data.coords['unit'].shape[0]
 
 scale = ((raw_data[0]*raw_data[1]).mean('stim').sum('unit')**.5).values
-scale = 5#just wanted to make axis limits similar to other plots
+scale = 5#did this by hand for visualization
 n_neur = raw_data.coords['unit'].shape[0]
 # load sig_eigs
 params = fit_df.loc[nm, ['fit_cvpca_w_log_c1', 'fit_cvpca_w_alpha1', ]]
@@ -262,4 +262,49 @@ plt.yticks([1, 1e6, 1e12, 1e18])
 plt.savefig('./chi_squared_eig_mom_fits.pdf', 
                                 bbox_inches='tight', transparent=True)
 
+# %%
+prs_bpl = []
+prs_pl1 = []
+for i, eig_spec in enumerate(sig_eigs_bpl):
+    #get participation ratio of eig_spec
+    ind = np.arange(1, len(eig_spec)+1).astype(float)
+    pr = (eig_spec).sum()**2/(eig_spec**2).sum()
+    prs_bpl.append(pr)
+    pl_eig_spec = ind**(-1.)
+    pr = (pl_eig_spec).sum()**2/(pl_eig_spec**2).sum()
+    prs_pl1.append(pr)
+
+#plt.loglog(ind, eig_spec, label=eig_nms[i], color=colors[i])
+# %%
+plt.plot(prs_bpl, 'r', label='broken power law')
+plt.plot(prs_pl1, 'b', label='power law')
+plt.ylim(0,None)
+plt.legend()
+
+#%%
+print('Average ratio of PR BPL to PL=1:', np.round((np.array(prs_bpl)/np.array(prs_pl1)).mean(), 2))
+# %%
+for i, eig_spec in enumerate(sig_eigs_bpl):
+    ind = np.arange(1, len(eig_spec)+1)
+    eig_spec = eig_spec/eig_spec.sum()
+    plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='r', lw=0.25)
+    eig_spec = ind**-1.
+    eig_spec = eig_spec/eig_spec.sum()
+    plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='k', lw=0.25)
+#%%
+plt.figure(figsize=(4,4))
+for i, eig_spec in enumerate(sig_eigs_bpl):
+    ind = np.arange(1, len(eig_spec)+1)
+    eig_spec = eig_spec/eig_spec.sum()
+    #plot cumulative sum
+    plt.plot(ind, eig_spec.cumsum(), label='broken power laws', c='r',)
+    eig_spec = ind**-1.
+    eig_spec = eig_spec/eig_spec.sum()
+    plt.plot(ind, eig_spec.cumsum(), label='power law slope=1', c='k',)
+    plt.grid()
+    plt.semilogx()
+    if i == 0:
+        plt.legend()
+    plt.xlabel('i (rank)')
+    plt.ylabel('Cumulative fraction variance explained')
 # %%
