@@ -3,7 +3,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import scipy.io as sio
 import pandas as pd
 import scipy.stats as stats
 import xarray as xr
@@ -272,7 +271,7 @@ plt.savefig('gabor_compared_to_pc.pdf', bbox_inches='tight', transparent=True)
 # %% get max difference between gabor and pc
 diff = r2.sel(model='Gabor') - r2.sel(model='PC')
 print(diff.max())
-#%%
+#%% snr estimate across sub-sampling to see effect of snr estimation error
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
 fn = 'ms_natimg2800_M170717_MP033_2017-08-20'#example recording
 for rec in range(7):
@@ -287,4 +286,7 @@ for rec in range(7):
     plt.plot([1,5e3], [np.nanmean(neur_snr),]*2, c='k', ls ='--', 
                                 label='Neuron average (noise corrected)')
     plt.semilogx()
+    plt.ylim(0, None)
+    nm = fn.split('_')[-2] + '_' + fn.split('_')[-1]
+    plt.title(nm)
 # %%
