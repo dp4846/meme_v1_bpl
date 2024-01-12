@@ -103,7 +103,9 @@ fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' 
 imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
 sub_sample = 1
 #%%
-# %% SNR estimation for eigs and neurons
+# %% SNR estimation for eigs and neurons do this n_samps times for each recording with different subsets of stimuli
+n_samps = 5
+n_test_stim = 300
 for rec in tqdm(range(len(fns))):
     da = xr.open_dataset(fns[rec])
     fn = fns[rec].split('/')[-1].split('.')[0]
@@ -112,26 +114,32 @@ for rec in tqdm(range(len(fns))):
     r = da['resp'][:, ::sub_sample, ::sub_sample]
     n_rep, n_stim, n_neur = r.shape
     r = r - r.mean('stim')
-    r_train = r[:, :2000]#subset of stimuli on which to estimate signal eigenvectors
-    r_test = r[:, 2000:]#subset of stimuli on which to estimate SNR
-    n_rep_train, n_stim_train, n_neur_train = r_train.shape
-    n_rep_test, n_stim_test, n_neur_test = r_test.shape
-    sig_cov_train = r_train[0].values.T @ r_train[1].values # just using for SVD so doesn't need scaling to covariance estimate
-    u_r_train = TruncatedSVD(n_components=n_stim_train, algorithm='arpack').fit(sig_cov_train).components_.T
-    n_pc = n_stim_train
-    snrs=[]
-    for i in tqdm(range(n_pc)):
-        #these are the two 'repeat' responses from the eigenmode
-        u1 = u_r_train[:,i:i+1].T @ r_test[0].values.T#project test response from trial 1 onto trained singular vector
-        u2 = u_r_train[:,i:i+1].T @ r_test[1].values.T#project test response from trial 2 onto trained singular vector
-        u = np.concatenate([u1, u2], 0)
-        snr_corr = hat_snr(u, noise_corrected=True)#calculate snr across repeats
-        snrs.append(snr_corr)
-    snrs_pc_train_split = np.array(snrs)
+    snrs_pc = []
+    for i in range(n_samps):
+        train_inds = np.random.choice(np.arange(n_stim), size=n_test_stim, replace=False)
+        test_inds = np.setdiff1d(np.arange(n_stim), train_inds)
+        r_train = r[:, train_inds]#subset of stimuli on which to estimate signal eigenvectors
+        r_test = r[:, test_inds]#subset of stimuli on which to estimate SNR
+        n_rep_train, n_stim_train, n_neur_train = r_train.shape
+        n_rep_test, n_stim_test, n_neur_test = r_test.shape
+        sig_cov_train = r_train[0].values.T @ r_train[1].values # just using for SVD so doesn't need scaling to covariance estimate
+        u_r_train = TruncatedSVD(n_components=n_stim_train, algorithm='arpack').fit(sig_cov_train).components_.T
+        n_pc = n_stim_train
+        snrs=[]
+        for i in tqdm(range(n_pc)):
+            #these are the two 'repeat' responses from the eigenmode
+            u1 = u_r_train[:,i:i+1].T @ r_test[0].values.T#project test response from trial 1 onto trained singular vector
+            u2 = u_r_train[:,i:i+1].T @ r_test[1].values.T#project test response from trial 2 onto trained singular vector
+            u = np.concatenate([u1, u2], 0)
+            snr_corr = hat_snr(u, noise_corrected=True)#calculate snr across repeats
+            snrs.append(snr_corr)
+        snrs_pc_train_split = np.array(snrs)
+        snrs_pc.append(snrs_pc_train_split)
+    snrs_pc_train_split = np.array(snrs_pc)
     snr_neurs = hat_snr(r, noise_corrected=True)#get snr for each neuron
 
     np.save(eig_tuning_dir + 'neur_snr_' + fn + '.npy', snr_neurs)
-    np.save(eig_tuning_dir + 'pc_snr_' + fn + '.npy', snrs_pc_train_split)
+    np.save(eig_tuning_dir + 'pc_snr_resampling_' + fn + '.npy', snrs_pc_train_split)
 
 # %% eig and neur r2 with linear filters effect of dimensionality and stimuli truncation
 n_eigenmodes = 10
@@ -250,4 +258,3 @@ for i in range(num_rows):
 plt.suptitle('32 Gabor filters of ' + str(filters_gabor.shape[0]))
 
 plt.savefig('./example_gabor_filters.png', dpi=300, bbox_inches='tight', transparent=True)
-# %%
