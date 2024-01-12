@@ -24,7 +24,7 @@ ci_dir = './bpl2_sims/'
 #get names of all csv files in ci_dir
 ci_files = os.listdir(ci_dir)
 ci_files = [f for f in ci_files if f[-4:] == '.csv']
-fit_df = pd.read_csv('str_pt_estimates.csv').set_index('fn_nms')
+fit_df = pd.read_csv('str_pt_estimates.csv', index_col=0)
 #%%
 #first make the example plot
 i = 2
@@ -35,7 +35,7 @@ ci_file = [f for f in ci_files if nm in f][0]
 n_recs = len(fit_df)
 ci_dfs = []
 for rec in range(n_recs):
-    fn_nm = fit_df['file_name'][rec]
+    fn_nm = fit_df.index[rec]
     #get ci_file in ci_files with nm in it
     ci_file = [f for f in ci_files if fn_nm in f][0]
     #read csv in ci_file
@@ -96,6 +96,7 @@ for legends in [True, False]:
     colors = ['blue', 'pink', 'red']
     alphas = [1, 1., 1]
     for i, eig_spec in enumerate(sig_eigs):
+        ind = np.arange(1, len(eig_spec)+1)
         plt.loglog(ind, eig_spec, label=eig_nms[i], color=colors[i], alpha=alphas[i])
         #plt.loglog(ind, eig_spec, label=eig_nms[i], color=colors[i])
     if legends:
@@ -114,7 +115,8 @@ for legends in [True, False]:
 
     plt.subplot(142)
     #set face color to none
-    plt.errorbar(eig_ind, eig_mom, yerr=eig_mom_bs_resc.std(0)*1.94, c='grey', marker='none', mfc='none', zorder=10);plt.semilogy()
+    plt.errorbar(eig_ind, eig_mom, yerr=eig_mom_bs_resc.std(0)*1.94, c='grey', marker='none', mfc='none', zorder=10);
+    plt.semilogy()
     if legends:
         plt.legend(['Unbiased estimate ' r'$\pm$' ' 95% CI'], loc=(1,1.5), framealpha=1)
     for i, eig_spec in enumerate(sig_eigs):
@@ -129,7 +131,7 @@ for legends in [True, False]:
 
     sig_eigs_bpl = []
     for i in range(len(fit_df)):
-        nm = fit_df.iloc[i]['file_name']
+        nm = fit_df.index[i]
         scale = 5
         raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
         n_neur = raw_data.coords['unit'].shape[0]
@@ -146,7 +148,7 @@ for legends in [True, False]:
     plt.subplot(143)
     for i, eig_spec in enumerate(sig_eigs_bpl):
         ind = np.arange(1, len(eig_spec)+1)
-        plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='r', lw=0.25)
+        plt.loglog(ind, eig_spec, label=fit_df.index[i].split('ms_')[1], c='r', lw=0.25)
         #plt.loglog(ind, eig_spec, label=eig_nms[i], color=colors[i])
 
     plt.annotate(r'$\alpha_1$', xy=(3, 1), fontsize=12, xycoords='data')
@@ -164,7 +166,7 @@ for legends in [True, False]:
 
     plt.subplot(144)
     plt.errorbar(fit_df['fit_cvpca_w_alpha1'], fit_df['pl_b1_raw_alpha2'], 
-                yerr=ci_df['pl_b1_raw_alpha2'].groupby('fn_nms').std()*1.94, linestyle='none', marker='.', c='k',
+                yerr=ci_df['pl_b1_raw_alpha2'].groupby(level=0).std()*1.94, linestyle='none', marker='.', c='k',
                 ecolor='k', elinewidth=0.5, capsize=0.5, markeredgewidth=0.5, markeredgecolor='w', zorder=10)
 
     ll = 0.9
@@ -193,7 +195,7 @@ mom_dist = xr.open_dataarray( './mom_dist.nc')
 mom_est = xr.open_dataarray( './mom_est.nc')
 k_moms = 10
 stats = []
-for nm in fit_df['file_name']:
+for nm in fit_df.index:
     #load the raw data
     raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
     n_neur = raw_data.coords['unit'].shape[0]
@@ -257,7 +259,7 @@ for i in range(stats.shape[0]):
             plt.scatter(i, stats[i,j,1], marker='.', color='k', s=5, zorder=10)
 plt.xticks(np.arange(0, stats.shape[0], 1))
 #make the xtick labels follow the convention: ms_natimg2800_M160825_MP027_2016-12-14 - > MP030_2017-05-29
-labels = fit_df['file_name'].values
+labels = fit_df.index
 labels = [l.split('_')[-2] + '_' + l.split('_')[-1] for l in labels]
 plt.gca().set_xticklabels(labels, rotation=90, fontsize=6)
 fn_nms = fit_df.index
@@ -296,14 +298,14 @@ print('Average ratio of PR BPL to PL=1:', np.round((np.array(prs_bpl)/np.array(p
 for i, eig_spec in enumerate(sig_eigs_bpl):
     ind = np.arange(1, len(eig_spec)+1)
     eig_spec = eig_spec/eig_spec.sum()
-    plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='r', lw=0.25)
+    plt.loglog(ind, eig_spec, label=fit_df.index[i].split('ms_')[1], c='r', lw=0.25)
     eig_spec = ind**-1.
     eig_spec = eig_spec/eig_spec.sum()
-    plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='k', lw=0.25)
+    plt.loglog(ind, eig_spec, label=fit_df.index[i].split('ms_')[1], c='k', lw=0.25)
 #%%
 #get average number of neurons for each recording
 n_neurs = []
-for nm in fit_df['file_name']:
+for nm in fit_df.index:
     #load the raw data
     raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
     n_neur = raw_data.coords['unit'].shape[0]
@@ -353,7 +355,7 @@ plt.xlabel('Recording')
 
 plt.ylim(0, None)
 #get the average ratio of ind_frac_var_pl to ind_frac_var
-print('Average ratio of PL to BPL:', np.round((np.array(ind_frac_vars)/np.array(ind_frac_var_pl)).mean(), 2))
+print('Average ratio of PL to BPL:', np.round((np.array(ind_frac_vars_bpl)/np.array(ind_frac_var_pl)).mean(), 2))
 # %%
 #average number for bpl
 print('Average number of eigenvectors for BPL:', np.round(np.array(ind_frac_vars_bpl).mean(), 2))
