@@ -13,22 +13,23 @@ import sys
 sys.path.append('../../src/')
 import eig_mom as em
 
-with open('../../data/data_dir.txt', 'r') as file:
-    data_dir = file.read().split('/n')[0]
-raw_data_dir =  data_dir + 'orig_stringer2019_data/'
+data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
+orig_data_dir = data_dir + 'orig_stringer2019_data/'
+resp_data_dir = data_dir + 'processed_data/neural_responses/'
+raw_data_dir =  data_dir + '/orig_stringer2019_data/'
 
 #%%
-fns = [fn for fn in os.listdir(raw_data_dir) if 'natimg2800_' in fn 
+fns = [fn for fn in os.listdir(resp_data_dir) if 'natimg2800_' in fn 
             and not 'npy' in fn and 'ms' in fn and '.nc' in fn]
 #%%
 #first make data structures to hold results
-n_neurs= []
+n_neurs = []
 sub_samp = 1
 n_rec = len(fns)
 # for holding onto eigenspectra raw results
 fn_nms = [fns[rec].split('/')[-1].split('.')[0] for rec in range(n_rec)]
 for rec in fn_nms:
-    n_neurs.append(xr.open_dataset(raw_data_dir + rec + '.nc')['resp'][..., ::sub_samp].shape)
+    n_neurs.append(xr.open_dataset(resp_data_dir + rec + '.nc')['resp'][..., ::sub_samp].shape)
 max_n_neurs = np.max(n_neurs)#the number of neurons in the largest recording
 #this is the number of eigenvalues we will be able to estimate
 #so xarray has to be this big
@@ -42,7 +43,6 @@ for fit_type in pl_fit_types:#append fit type to parameter names
     if 'fit_cvpca' in fit_type:
         pl_param_nms += [fit_type + '_' + nm  for nm in ['log_c1', 'alpha1']]
     if 'pl' in fit_type:
-
         if 'b0' in fit_type:#if no breaks
             pl_param_nms += [fit_type + '_' + nm  for nm in nms[:2]]#only two params
         if 'b1' in fit_type:# if one break
