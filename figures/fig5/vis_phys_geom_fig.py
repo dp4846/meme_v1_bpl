@@ -35,7 +35,7 @@ ind = neur_snr>thresh
 neur_pc_r2_good = neur_pc_r2[ind]
 neur_gabor_r2_good = neur_gabor_r2[ind]
 
-
+#%%
 # fig 5a
 plt.figure(figsize=(4,2))
 xticks = [1, 10, 100, 1000]
@@ -272,3 +272,19 @@ plt.savefig('gabor_compared_to_pc.pdf', bbox_inches='tight', transparent=True)
 # %% get max difference between gabor and pc
 diff = r2.sel(model='Gabor') - r2.sel(model='PC')
 print(diff.max())
+#%%
+fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
+fn = 'ms_natimg2800_M170717_MP033_2017-08-20'#example recording
+for rec in range(7):
+    fn = fns[rec]
+    fn = fn.split('/')[-1].split('.')[0]
+    pc_snr = np.load(eig_tuning_dir + 'pc_snr_resampling_' + fn + '.npy').T
+    neur_snr = np.load(eig_tuning_dir + 'neur_snr_' + fn + '.npy').T
+    plt.figure(figsize=(3,1.5))
+    print(pc_snr.shape)
+    plt.plot(range(1,1+len(pc_snr)), pc_snr,  label='Eigenvector (lower bound)', alpha=0.5, c='k')
+    plt.plot(range(1,1+len(pc_snr)), pc_snr.mean(1), c='k', label='Eigenvector (lower bound)')
+    plt.plot([1,5e3], [np.nanmean(neur_snr),]*2, c='k', ls ='--', 
+                                label='Neuron average (noise corrected)')
+    plt.semilogx()
+# %%
