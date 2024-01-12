@@ -129,11 +129,12 @@ for legends in [True, False]:
 
     sig_eigs_bpl = []
     for i in range(len(fit_df)):
-        fn_nm = fit_df.iloc[i]['file_name']
+        nm = fit_df.iloc[i]['file_name']
         scale = 5
+        raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
         n_neur = raw_data.coords['unit'].shape[0]
-        
-        params = fit_df.loc[fn_nm].loc[['pl_b1_raw_log_c1', 'pl_b1_raw_alpha1', 'pl_b1_raw_b1', 'pl_b1_raw_alpha2']]
+
+        params = fit_df.loc[nm].loc[['pl_b1_raw_log_c1', 'pl_b1_raw_alpha1', 'pl_b1_raw_b1', 'pl_b1_raw_alpha2']]
         A = list(params[['pl_b1_raw_alpha1', 'pl_b1_raw_alpha2']])
         B = [int(params['pl_b1_raw_b1']),]
         log_c1 = params['pl_b1_raw_log_c1']
@@ -194,9 +195,9 @@ k_moms = 10
 stats = []
 for nm in fit_df['file_name']:
     #load the raw data
-    resp_data_file = [f for f in os.listdir(resp_data_dir) if nm in f][0]
-    raw_data = xr.open_dataset(resp_data_dir + resp_data_file)['resp']
+    raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
     n_neur = raw_data.coords['unit'].shape[0]
+
 
 
     #get original ests and  whitening matrix from mom_dist for 10 moments
@@ -236,7 +237,7 @@ stats = np.array(stats)
 print(stats.shape)
 #plot the p-values as a trace for each recording
 
-plt.figure(figsize=(1,1))
+plt.figure(figsize=(2,2))
 plt.plot(stats[:,0,1], label='cvPCA', color= colors[0],lw=1)
 plt.plot(stats[:,1,1], label='MEME', color= colors[1], lw=1)
 plt.plot(stats[:,2,1], label='MEME with broken power law', color= colors[2], lw=1)
@@ -250,15 +251,23 @@ plt.ylim(0.1, 10 * stats.max())
 #now make scatter plots on the same traces with open dots for where p > 0.01
 for i in range(stats.shape[0]):
     for j in range(stats.shape[1]):
-        if stats[i,j,0] > 0.01:
+        if stats[i,j,0] > 0.001:
             plt.scatter(i, stats[i,j,1], marker='x', color='k', s=10, zorder=10)
         else:
             plt.scatter(i, stats[i,j,1], marker='.', color='k', s=5, zorder=10)
 plt.xticks(np.arange(0, stats.shape[0], 1))
+#make the xtick labels follow the convention: ms_natimg2800_M160825_MP027_2016-12-14 - > MP030_2017-05-29
+labels = fit_df['file_name'].values
+labels = [l.split('_')[-2] + '_' + l.split('_')[-1] for l in labels]
+plt.gca().set_xticklabels(labels, rotation=90, fontsize=6)
 fn_nms = fit_df.index
 fn_nms = [(f.split('_')[-1]) for f in fn_nms]
 #plt.gca().set_xticklabels(fn_nms, rotation=90, fontsize=6)
 plt.yticks([1, 1e6, 1e12, 1e18])
+#create custom legend where black dots are sig dif and x's are not sig dif
+plt.legend(handles=[plt.Line2D([0], [0], marker='.', color='k', lw=0, markersize=5, label=r'$p \leq 0.001$'),
+                    plt.Line2D([0], [0], marker='x', color='k', lw=0, markersize=5, label=r'$p > 0.001$'),], 
+                    loc=(1.01,0.), framealpha=1, title=r'$\chi^2$' + ' test')
 plt.savefig('./chi_squared_eig_mom_fits.pdf', 
                                 bbox_inches='tight', transparent=True)
 
@@ -292,19 +301,62 @@ for i, eig_spec in enumerate(sig_eigs_bpl):
     eig_spec = eig_spec/eig_spec.sum()
     plt.loglog(ind, eig_spec, label=fit_df.iloc[i]['file_name'].split('ms_')[1], c='k', lw=0.25)
 #%%
-plt.figure(figsize=(4,4))
+#get average number of neurons for each recording
+n_neurs = []
+for nm in fit_df['file_name']:
+    #load the raw data
+    raw_data = xr.open_dataset(resp_data_dir + nm + '.nc')['resp']
+    n_neur = raw_data.coords['unit'].shape[0]
+    n_neurs.append(n_neur)
+print('Average number of neurons:', np.round(np.array(n_neurs).mean(), 2))
+np.max(n_neurs)
+#%%
+plt.figure(figsize=(4,3))
+frac_var = 0.75
+ind_frac_vars_bpl = []
+ind_frac_vars_pl = []
 for i, eig_spec in enumerate(sig_eigs_bpl):
     ind = np.arange(1, len(eig_spec)+1)
     eig_spec = eig_spec/eig_spec.sum()
-    #plot cumulative sum
-    plt.plot(ind, eig_spec.cumsum(), label='broken power laws', c='r',)
-    eig_spec = ind**-1.
-    eig_spec = eig_spec/eig_spec.sum()
-    plt.plot(ind, eig_spec.cumsum(), label='power law slope=1', c='k',)
+    plt.plot(ind, eig_spec.cumsum(), label='Fit broken power laws', c='r',)
+    ind_frac_var = ind[eig_spec.cumsum() < frac_var][-1]
+    ind_frac_vars_bpl.append(ind_frac_var)
     plt.grid()
     plt.semilogx()
-    if i == 0:
+    
+    eig_spec = ind**-1.
+    eig_spec = eig_spec/eig_spec.sum()
+    #plot a vertical line where the variance explained is 0.8
+    ind_frac_var_pl = ind[eig_spec.cumsum() < frac_var][-1]
+    ind_frac_vars_pl.append(ind_frac_var_pl)
+    #plt.plot([ind_frac_var_pl, ind_frac_var_pl], [0, frac_var], c='k')
+    if i ==0:    
+        #plot for example visualizations without too much crowding.
+        
+        ind = np.arange(1, 10000)
+        eig_spec = ind**-1.
+        eig_spec = eig_spec/eig_spec.sum()
+        plt.plot(ind, eig_spec.cumsum(), label='Power law slope=1', c='k',)
         plt.legend()
-    plt.xlabel('i (rank)')
+
+    plt.xlabel('Eigenvector rank')
     plt.ylabel('Cumulative fraction variance explained')
+plt.yticks([0, 0.25, 0.5, 0.75, 1], [0, 0.25, 0.5, 0.75, 1], )
+plt.xticks([1, 10, 100, 1000, 10000], ['1', '10', '100', '1,000', '10,000'], )
+plt.savefig('./fig_S2.pdf',
+                                bbox_inches='tight', transparent=True)
 # %%
+plt.plot(ind_frac_vars_bpl, 'o')
+plt.plot(ind_frac_vars_pl, 'o')
+plt.ylabel('i where cumulative frac var = 0.8')
+plt.xlabel('Recording')
+
+plt.ylim(0, None)
+#get the average ratio of ind_frac_var_pl to ind_frac_var
+print('Average ratio of PL to BPL:', np.round((np.array(ind_frac_vars)/np.array(ind_frac_var_pl)).mean(), 2))
+# %%
+#average number for bpl
+print('Average number of eigenvectors for BPL:', np.round(np.array(ind_frac_vars_bpl).mean(), 2))
+print('Average number of eigenvectors for PL:', np.round(np.array(ind_frac_vars_pl).mean(), 2))
+# %%
+
