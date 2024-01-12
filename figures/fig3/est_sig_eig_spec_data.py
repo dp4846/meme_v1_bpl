@@ -20,7 +20,7 @@ raw_data_dir =  data_dir + '/orig_stringer2019_data/'
 
 #%%
 fns = [fn for fn in os.listdir(resp_data_dir) if 'natimg2800_' in fn 
-            and not 'npy' in fn and 'ms' in fn and '.nc' in fn]
+            and not 'npy' in fn and 'ms' in fn and '.nc' in fn and '0_M' in fn]
 #%%
 #first make data structures to hold results
 n_neurs = []
@@ -35,9 +35,9 @@ max_n_neurs = np.max(n_neurs)#the number of neurons in the largest recording
 #so xarray has to be this big
 #eigenspectra will be estimated for each of the estimators below
 pl_fit_types = ['cvpca', 'fit_cvpca_w', 'fit_cvpca_no_w',
-                'pl_b0_raw', 'pl_b1_raw', 'pl_b2_raw', ] 
+                'pl_b0_raw', 'pl_b1_raw',]
 #for holding onto parameters
-nms = ['log_c1', 'alpha1', 'b1', 'alpha2', 'b2', 'alpha3',]#names of parameters
+nms = ['log_c1', 'alpha1', 'b1', 'alpha2', ]#names of parameters
 pl_param_nms = []
 for fit_type in pl_fit_types:#append fit type to parameter names
     if 'fit_cvpca' in fit_type:
@@ -47,8 +47,7 @@ for fit_type in pl_fit_types:#append fit type to parameter names
             pl_param_nms += [fit_type + '_' + nm  for nm in nms[:2]]#only two params
         if 'b1' in fit_type:# if one break
             pl_param_nms += [fit_type + '_' + nm  for nm in nms[:4]]#four params
-        if 'b2' in fit_type:#if two breaks
-            pl_param_nms += [fit_type + '_' + nm  for nm in nms]#all params
+
 res_df = pd.DataFrame(np.zeros((n_rec, len(pl_param_nms))), columns=pl_param_nms)
 #set index of res_df to be the recording names
 res_df.index = fn_nms
@@ -71,13 +70,13 @@ run_mom_est = False #this will ignore any mom_est and mom_dist files that alread
 #check if mom_dist and mom_est files already exist
 if os.path.isfile(data_dir + './mom_dist.nc') and not run_mom_est:
     mom_dist = xr.open_dataarray('./mom_dist.nc')
-    mom_est = xr.open_dataarray(data_dir + './mom_est.nc')
+    mom_est = xr.open_dataarray('./mom_est.nc')
 else:
     for rec in tqdm(list(mom_dist.coords['recording'].values)):
         # print recording file name
         print(rec)
         #load data
-        ds = xr.open_dataset(raw_data_dir + rec + '.nc')
+        ds = xr.open_dataset(resp_data_dir + rec + '.nc')
         resp = ds['resp'][..., ::sub_sample]
         resp = resp/(resp[0]*resp[1]).mean('stim').sum('unit')**.5
         #estimate eigenmoments
@@ -86,11 +85,11 @@ else:
         mom_dist.loc[rec] = em.bs_eig_mom(resp.values, k_moms, n_bs_samps)
 
     if sub_sample ==1:    
-        mom_dist.to_netcdf(data_dir + './mom_dist.nc' )
-        mom_est.to_netcdf(data_dir + './mom_est.nc' )
-    else:
-        mom_dist.to_netcdf(data_dir + './mom_dist_sub_samp_' + str(sub_sample) + '.nc' )
-        mom_est.to_netcdf(data_dir + './mom_est_sub_samp_' + str(sub_sample) + '.nc' )
+        mom_dist.to_netcdf('./mom_dist.nc' )
+        mom_est.to_netcdf('./mom_est.nc' )
+    else:#this was just for debugging
+        mom_dist.to_netcdf('./mom_dist_sub_samp_' + str(sub_sample) + '.nc' )
+        mom_est.to_netcdf('./mom_est_sub_samp_' + str(sub_sample) + '.nc' )
 
 # %% eigenspectra parameter estimation using cvPCA and MEME
 trans_type = 'raw'
@@ -102,7 +101,7 @@ k_moms_fit = 10
 for rec in tqdm(list(res_df.index.values)):
 
     #cvPCA estimated power law
-    ds = xr.open_dataset(raw_data_dir + rec + '.nc')
+    ds = xr.open_dataset(resp_data_dir + rec + '.nc')
     Y_r = ds['resp'][..., ::sub_samp]
     if do_cvPCA:
         Y_r = Y_r/(Y_r[0]*Y_r[1]).mean('stim').sum('unit')**.5
@@ -151,7 +150,6 @@ for rec in tqdm(list(res_df.index.values)):
         res_df.loc[rec, ['pl_b0_' + trans_type + '_log_c1',
                             'pl_b0_' + trans_type + '_alpha1',]] = log_c1, alpha_1
         print('finished pl_b0')
-        print(res)
 
         ######### two slope power-law
         slopes = [init_slope, ]*2# initial guess at slope
@@ -171,26 +169,6 @@ for rec in tqdm(list(res_df.index.values)):
         # print finished two slope power-law
         print('finished pl_b1')
 
-        search_break_points_2 = np.array([i for i in product(*[search_break_points, search_break_points])])
-        search_break_points_2 = search_break_points_2[search_break_points_2[:,0]<search_break_points_2[:,1]]
-        search_break_points_list = [list(i) for i in search_break_points_2]
-
-
-        ######## three slope power-law
-        slopes = [init_slope, ]*3# initial guess at slope
-        params, b2 = em.break_point_search_fit_broken_power_law_meme(Y_r, k_moms_fit, 
-                                    search_break_points_list, init_log_c1, slopes,
-                                    return_res=False, W=W, transform='raw',
-                                    bs_est_eig=bs_est_eig, est_eig_mom=est_eig_mom)
-        log_c1, alpha_1, alpha_2, alpha_3 = params
-        break_points = list(b2)
-        res_df.loc[rec, ['pl_b2_' + trans_type + '_log_c1',
-                            'pl_b2_' + trans_type + '_alpha1',
-                            'pl_b2_' + trans_type + '_b1',
-                            'pl_b2_' + trans_type + '_alpha2',
-                            'pl_b2_' + trans_type + '_b2',
-                            'pl_b2_' + trans_type + '_alpha3',]] = log_c1, alpha_1, b2[0], alpha_2,  b2[1], alpha_3
-        print('finished pl_b2')
 
     res_df.to_csv('str_pt_estimates.csv')
 
