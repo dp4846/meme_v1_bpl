@@ -273,7 +273,8 @@ diff = r2.sel(model='Gabor') - r2.sel(model='PC')
 print(diff.max())
 #%% snr estimate across sub-sampling to see effect of snr estimation error
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn and not 'npy' in fn and 'ms' in fn]
-fn = 'ms_natimg2800_M170717_MP033_2017-08-20'#example recording
+pc_snrs = []
+neur_snrs = []
 for rec in range(7):
     fn = fns[rec]
     fn = fn.split('/')[-1].split('.')[0]
@@ -289,4 +290,18 @@ for rec in range(7):
     plt.ylim(0, None)
     nm = fn.split('_')[-2] + '_' + fn.split('_')[-1]
     plt.title(nm)
+    neur_snrs.append(np.nanmean(neur_snr))
+    pc_snrs.append(pc_snr[:10].mean())
 # %%
+#plot the ratios
+plt.figure(figsize=(3,1.5))
+neur_snrs = np.array(neur_snrs)
+
+plt.scatter(range(len(neur_snrs)), pc_snrs/neur_snrs, c='k', marker='.')
+plt.ylim(0, None)
+fn_labels = [fn.split('_')[-2] + '_' + fn.split('_')[-1].split('.')[0] for fn in fns]
+plt.xticks(range(len(fn_labels)), fn_labels, rotation=90, ha='left', fontsize=8)
+plt.xlabel('Recording')
+plt.ylabel('Ratio of top 10 PCs \n to single neuron \n average SNR')
+#% print the average of the ratios
+print('mean eig to neur snr ratio for resampled pc ', np.mean(pc_snrs/neur_snrs))
