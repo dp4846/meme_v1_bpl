@@ -342,7 +342,7 @@ def fit_broken_power_law_meme_W(Y_r, k_moms, break_points, log_c1, slopes,
 
 
 def break_point_search_fit_broken_power_law_meme(Y_r, k_moms, all_break_points, log_c1, slopes,
-                                 return_res=False, W=None, transform='raw',
+                                 return_full_res=False, W=None, transform='raw',
                                  bs_est_eig=None, est_eig_mom=None):
     # fit broken power law to eigenmoments trying all break points and choosing that with the lowest cost
     #first get estimated eigenmoments
@@ -369,7 +369,7 @@ def break_point_search_fit_broken_power_law_meme(Y_r, k_moms, all_break_points, 
     
     #then find the best fit
     best_fit = np.argmin([res.cost for res in fit_results])
-    if return_res:#return the full result if requested (useful for debugging, includes success status)
+    if return_full_res:#return the full result if requested (useful for debugging, includes success status)
         return [fit_results[best_fit], all_break_points[best_fit], fit_results]
     else:#otherwise just return the parameters
         return [fit_results[best_fit].x, all_break_points[best_fit]]
