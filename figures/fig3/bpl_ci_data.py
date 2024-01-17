@@ -11,7 +11,7 @@ sys.path.append('../../src/')
 import eig_mom as em
 with open('../../data/data_dir.txt', 'r') as file:
     data_dir = file.read().split('/n')[0]
-raw_data_dir =  data_dir + 'orig_stringer2019_data/'
+raw_data_dir =  data_dir + '/processed_data/neural_responses/'
 cov_data_dir = data_dir + '/processed_data/stringer_sn_covs/'
 ci_dir = './bpl2_sims/'
 
@@ -23,11 +23,31 @@ k_moms = 10
 n_breaks = 50
 initial_break_search_break_points = list(range(2, 50, 2))
 
-# read in pt estimates for the true eigenspectrum of the simulation
-fit_df = pd.read_csv('str_pt_estimates.csv')
-for rec in range(7):
+# Load CSV with the first column as the index
+fit_df = pd.read_csv('str_pt_estimates.csv', index_col=0).reset_index()
+# Add a label to the first column
+fit_df = fit_df.rename(columns={'index': 'fn_nms'})
+
+#if you don't want to use threads (uses more memory but is faster) you can use the following
+for rec in tqdm(range(7)):
     nm = fit_df['fn_nms'][rec]
     fn = raw_data_dir + nm + '.nc'
+    
+    #check if you have already run this and start from last completed bootstrap
+    write_nm = f"{ci_dir}rec_{rec}_{nm}_pbci_bpl2.csv"
+    start_bs = 0
+    if os.path.exists(write_nm):
+        df = pd.read_csv(write_nm, index_col=0)
+        last_valid = df.iloc[:,-1].last_valid_index()
+        if last_valid is None:
+            start_bs = 0
+        else:
+            start_bs = last_valid + 1
+        print(f"loading {write_nm} and starting at {start_bs}")
+    else:
+        df = pd.DataFrame(columns=params.index, index=range(n_bs))
+        df.to_csv(write_nm)
+
     ds = xr.open_dataset(fn)['resp']
     n_rep,  n_stim, n_neur = ds.shape
     da = xr.open_dataset(cov_data_dir + nm +'.nc')['est_mean_SNR_cov_stringer']
@@ -43,10 +63,7 @@ for rec in range(7):
     sig_eig = np.exp(em.get_bpl_func_all(A, log_c1, B, ind))
 
 
-    # create a file for storing n_bs runs of the bootstrap with same columns as  params
-    df = pd.DataFrame(columns=params.index, index=range(n_bs))
-    write_nm = f"{ci_dir}rec_{rec}_{nm}_pbci_bpl2.csv"
-    df.to_csv(write_nm)
+
 
     #rescale appropriately
     resp = ds[..., :n_neur]
@@ -74,7 +91,7 @@ for rec in range(7):
                                 n_breaks-len(initial_break_search_break_points))]
     search_break_points_list = [[break_point,] for break_point in 
                                             search_break_points]
-    for bs_ind in tqdm(range(n_bs)):
+    for bs_ind in tqdm(range(start_bs, n_bs)):
         
         params, b1 = em.break_point_search_fit_broken_power_law_meme(Y_r[bs_ind], k_moms, 
                                         search_break_points_list, init_log_c1, slopes,
