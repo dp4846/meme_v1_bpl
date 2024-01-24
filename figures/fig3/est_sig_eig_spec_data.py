@@ -103,8 +103,9 @@ for rec in tqdm(list(res_df.index.values)):
     #cvPCA estimated power law
     ds = xr.open_dataset(resp_data_dir + rec + '.nc')
     Y_r = ds['resp'][..., ::sub_samp]
+    Y_r = Y_r/(Y_r[0]*Y_r[1]).mean('stim').sum('unit')**.5 #rescale by estimate of total signal variance
     if do_cvPCA:
-        Y_r = Y_r/(Y_r[0]*Y_r[1]).mean('stim').sum('unit')**.5
+
         Y_r = Y_r.values
     n_rep,  n_stim, n_neur = Y_r.shape
 

@@ -15,7 +15,6 @@ raw_data_dir =  data_dir + '/processed_data/neural_responses/'
 cov_data_dir = data_dir + '/processed_data/stringer_sn_covs/'
 ci_dir = './bpl2_sims/'
 
-# this should match the original fitting in est_sig_eig_spec.py
 n_bs = 20
 init_slope = 0.01
 init_log_c1 = 0.0
@@ -53,7 +52,7 @@ for rec in tqdm(range(7)):
     da = xr.open_dataset(cov_data_dir + nm +'.nc')['est_mean_SNR_cov_stringer']
     sig_cov, sig_v, noise_cov = [da[i].values for i in range(3)]
 
-    # load power law 
+    # load power law  to simulate from
     params = fit_df.set_index('fn_nms').loc[nm, ['pl_b1_raw_log_c1', 'pl_b1_raw_alpha1', 'pl_b1_raw_b1', 'pl_b1_raw_alpha2']]
     A = list(params[['pl_b1_raw_alpha1', 'pl_b1_raw_alpha2']])
     B = [int(params['pl_b1_raw_b1']),]
@@ -61,8 +60,6 @@ for rec in tqdm(range(7)):
     ind = np.arange(1, 1 + n_neur).astype(int)
     log_cs = [log_c1,]
     sig_eig = np.exp(em.get_bpl_func_all(A, log_c1, B, ind))
-
-
 
 
     #rescale appropriately
@@ -75,12 +72,12 @@ for rec in tqdm(range(7)):
     sig_cov_sc_pl = sig_v @ np.diag(sig_eig_sc) @ sig_v.T
     mean = resp.mean('stim').mean('rep').values
 
+    #generate parameteric bootstrap data
     noise = mn.rvs(mean=[0,]*n_neur, cov=noise_cov, 
             size=(n_bs, 2, n_stim))
     sig = mn.rvs(mean=mean, cov=sig_cov_sc_pl, size=n_stim)      
     Y_r = sig[np.newaxis] + noise
 
-    # from original code resp = resp/(resp[0]*resp[1]).mean('stim').sum('unit')**.5
     data_based_scale = (Y_r[:, 0]*Y_r[:, 1]).mean(-2,).sum(-1)**.5
     Y_r = Y_r/data_based_scale[:, None, None, None]
     slopes = [init_slope, ]*2# initial guess at slope
@@ -91,6 +88,7 @@ for rec in tqdm(range(7)):
                                 n_breaks-len(initial_break_search_break_points))]
     search_break_points_list = [[break_point,] for break_point in 
                                             search_break_points]
+    #now fit each bootstrap
     for bs_ind in tqdm(range(start_bs, n_bs)):
         
         params, b1 = em.break_point_search_fit_broken_power_law_meme(Y_r[bs_ind], k_moms, 
