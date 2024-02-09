@@ -148,7 +148,7 @@ def p_moms(A, k_moms, d_dims):
     F_i = np.eye(n)
     H = []
     for i in range(k_moms):
-        H.append(np.trace(F_i@A)/comb(n, i+1)/d_dims)
+        H.append(np.trace(F_i@A/comb(n, i+1)/d_dims))
         F_i = F_i@F
     return np.array(H)
 
