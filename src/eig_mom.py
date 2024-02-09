@@ -305,10 +305,9 @@ def fit_broken_power_law_meme_W(Y_r, k_moms, break_points, log_c1, slopes,
         them being estimated. Useful if you have already calculated these.
     Returns
     -------
-    TYPE
-        results of fitting from least_squares.
-        log_c1, slope_1, slope_2, ...
-
+    res_S : array
+        the parameters of the fit. if return_res is False, the parameters are
+        returned, otherwise the full result of the optimization is returned. 
     '''
     n_reps, n_stim, d_neurons= np.shape(Y_r)
     ind = np.arange(1, d_neurons+1).astype(float)#index of eigenspectrum
