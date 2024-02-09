@@ -12,15 +12,14 @@ import datetime
 import sys
 sys.path.append('../../src/')
 import eig_mom as em
-
-data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
+data_dir = '../../data/stringer_2019/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 raw_data_dir =  data_dir + '/orig_stringer2019_data/'
-
+np.random.seed(42)
 #%%
 fns = [fn for fn in os.listdir(resp_data_dir) if 'natimg2800_' in fn 
-            and not 'npy' in fn and 'ms' in fn and '.nc' in fn and '0_M' in fn]
+            and not 'npy' in fn and 'raw' in fn and '.nc' in fn and '0_M' in fn]
 #%%
 #first make data structures to hold results
 n_neurs = []
@@ -68,7 +67,7 @@ mom_dist = xr.DataArray(np.zeros((n_rec, n_bs_samps, k_moms, )),
 sub_sample = 1#this is just for debugging, to run without the full data set
 run_mom_est = False #this will ignore any mom_est and mom_dist files that already exist
 #check if mom_dist and mom_est files already exist
-if os.path.isfile(data_dir + './mom_dist.nc') and not run_mom_est:
+if os.path.isfile('./mom_dist.nc') and not run_mom_est:
     mom_dist = xr.open_dataarray('./mom_dist.nc')
     mom_est = xr.open_dataarray('./mom_est.nc')
 else:
@@ -85,8 +84,8 @@ else:
         mom_dist.loc[rec] = em.bs_eig_mom(resp.values, k_moms, n_bs_samps)
 
     if sub_sample ==1:    
-        mom_dist.to_netcdf('./mom_dist.nc' )
-        mom_est.to_netcdf('./mom_est.nc' )
+        mom_dist.to_netcdf('./mom_dist_raw.nc' )
+        mom_est.to_netcdf('./mom_est_raw.nc' )
     else:#this was just for debugging
         mom_dist.to_netcdf('./mom_dist_sub_samp_' + str(sub_sample) + '.nc' )
         mom_est.to_netcdf('./mom_est_sub_samp_' + str(sub_sample) + '.nc' )
@@ -105,7 +104,6 @@ for rec in tqdm(list(res_df.index.values)):
     Y_r = ds['resp'][..., ::sub_samp]
     Y_r = Y_r/(Y_r[0]*Y_r[1]).mean('stim').sum('unit')**.5 #rescale by estimate of total signal variance
     if do_cvPCA:
-
         Y_r = Y_r.values
     n_rep,  n_stim, n_neur = Y_r.shape
 
@@ -171,7 +169,13 @@ for rec in tqdm(list(res_df.index.values)):
         print('finished pl_b1')
 
 
-    res_df.to_csv('str_pt_estimates.csv')
+    res_df.to_csv('str_pt_estimates_raw.csv')
+#reset the index and make the recording names a column in the dataframe as fn_nms
+res_df = res_df.reset_index()
+res_df = res_df.rename(columns={'index': 'recording'})
+#save the results
+res_df.to_csv('str_pt_estimates_raw.csv')
 
 
 
+# %%
