@@ -8,16 +8,17 @@ from scipy.stats import multivariate_normal as mn
 import sys
 sys.path.append('../../src/')
 import eig_mom as em
-with open('./data_dir.txt', 'r') as file:
-    data_dir = file.read().split('\n')[0]
+
+data_dir = '../../data/'
 raw_data_dir =  data_dir + 'orig_stringer2019_data/'
 cov_data_dir = data_dir + 'processed_data/stringer_sn_covs/'
 fig3_dir = '../fig3/'
-pt_est_dir = fig3_dir + 'str_pt_ests/'
+pt_est_dir = fig3_dir #+ 'str_pt_ests/'
 sim_dir = 'meme_vs_cvpca_pl_est_match_str_sim/'
 if not os.path.exists(sim_dir):
     os.makedirs(sim_dir)
-
+    
+np.random.seed(42)
 n_bs = 20#how many simulations to run per recordings
 init_slope = 0.01
 k_moms = 10
@@ -114,3 +115,5 @@ for rec in range(7):
             df.loc[bs_ind].loc[['fit_cvpca_w_log_c1' + '_SN_cov_' + cov_type , 
                                 'fit_cvpca_w_alpha1' + '_SN_cov_' + cov_type ,]] = log_c1, alpha_1
             df.to_csv(write_nm)
+
+# %%

@@ -17,7 +17,7 @@ sys.path.append('../../src/')
 import eig_mom as em
 
 #%%
-np.random.seed(2)
+np.random.seed(42)
 n_stim = 2000
 d_neurons = 1000
 n_rep = 2
