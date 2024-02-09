@@ -140,8 +140,9 @@ def raw_to_central(mu_raw):
         mu_N_cs[N-1] = mu_N_c
     return mu_N_cs
 
-
 def p_moms(A, k_moms, d_dims):
+    # eigenmoment estimator
+    # see Algorithm 1 from: 'Spectrum estimation from samples. Kong and Valiant https://arxiv.org/abs/1602.00061
     n = np.shape(A)[0]
     F = np.triu(A,1)
     F_i = np.eye(n)
@@ -152,23 +153,28 @@ def p_moms(A, k_moms, d_dims):
     return np.array(H)
 
 def signal_er_eig_momk_centered(Y_1, Y_2, k_moms=5):
+    #Y_1 and Y_2 are the two repeats of n_stim X n_neur
+    #we assume stimuli selection is iid.
     n_stim, n_neur = Y_1.shape
     if n_stim%2>0:
         Y_1 = Y_1[:-1]
         Y_2 = Y_2[:-1]
+    # this step sets mean to 0 while preserving covariance
+    # see section in paper: 'Extension to noisy data' 2nd paragraph
     norm = 1/np.sqrt(2)
     Y1_sur = (Y_1[::2] - Y_1[1::2])*norm
     Y2_sur = (Y_2[::2] - Y_2[1::2])*norm
+    # this stim X stim signal covariance estimate is then unbiased
     A = Y1_sur@Y2_sur.T
+    #plugged into the eigenmoment estimator it gives an unbiased estimate of the eigenmoments
     k_eig_mom_ests = p_moms(A, k_moms, n_neur)
     return k_eig_mom_ests
 
 def get_bpl_func_all(A, log_c1, B, ind):
     #A is the list of slopes
     #log_c1 is the intercept of the first powerlaw
-    #B is the list of break points, one less than A
-    #ind is the 1-N list of eigenvalue indices
-    #assert that B is a list of integers
+    #B is the integer list of break points, one less than length of A
+    #ind is the 1 - N+1 list of eigenvalue indices
 
     log_cs = [log_c1,]
     for i in range(len(B)):

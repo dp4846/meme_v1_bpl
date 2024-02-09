@@ -97,20 +97,23 @@ Also, plots example gabors for visualization `'example_gabor_filters.pdf'`.
 ### GENERAL TODO
 
 I am currently just making sure all figures can be made and noting where data should be coming from and putting it all into _data files. text with a check box is a todo item.
+- [ ] check that using raw neural data works
+- [ ] put all definitions into src
+- [ ] put RFs and directories into src
+- [ ] use correct mean subtraction method.
+- [ ] put src test into v1_bpl_sims.
 
+- [X] run bpl_ci to make sure working for 2 power laws.
 - [X] replace figure 5 with new figure.
 - [X] supplementary figure of population SNR differences (just used summary stats).
 - [ ] supplementary figure of gabor regression for 
-    - [ ] neurons
+    - [X] neurons
     - [X] PCs.
     - [X] check if using powers of PC's can give gabor complex and simple cells (no).
 - [X] redo fig 3a-d with new figures
 - [X] redo fig 4b-d with new figures
-- [ ] use correct mean subtraction method.
-- [ ] use participation ratio.
-- [ ] put src test into v1_bpl_sims.
-- [ ] choose one normalization method, scale by var for example.
-- [ ] get recording X corresponding to actual id.
-- [ ] use raw neural data recordings.
-- [ ] put all definitions into src
-- [ ] put RFs and directories into src
+
+- [X] use participation ratio.
+
+- [X] get recording X corresponding to actual id.
+
