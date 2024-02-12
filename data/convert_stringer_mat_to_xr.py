@@ -44,7 +44,7 @@ for fn in (fns[:]):
 #raw_ is just the raw responses
 #ms_ is the mean subtracted responses
 #spont_sub_ is the mean subtracted responses with spontaneous activity subtracted
-for rec_trans in ['raw_', 'ms_', 'spont_sub_'][1:2]:
+for rec_trans in ['raw_', 'spont_sub_'][:]:
     for fn in (fns[:]):
         print(fn)
         dat = io.loadmat(data_dir + fn)
@@ -59,6 +59,7 @@ for rec_trans in ['raw_', 'ms_', 'spont_sub_'][1:2]:
         istim = istim[istim<nimg]
         print(resp.shape)
 
+        #this was original pre-processing of data but we want eigenspectra of raw data
         if rec_trans == 'spont_sub_':
             # subtract spont (32D)
             mu = spont.mean(axis=0)
@@ -68,9 +69,8 @@ for rec_trans in ['raw_', 'ms_', 'spont_sub_'][1:2]:
             sv,u = eigsh(spont.T @ spont, k=32)
             resp = resp - (resp @ u) @ u.T
             resp -= resp.mean(axis=0)#remove average response for each neuron across stimuli
-        elif rec_trans == 'ms_':
-            resp -= resp.mean(axis=0)
-        #otherwise you just keep the raw response
+        elif rec_trans == 'raw_':
+            resp = resp*1e-3#responses go up to ~1e3, scaling for numerical issues when calculating eigenmoments
 
         # split stimuli into two repeats
         NN = resp.shape[1]
@@ -90,7 +90,7 @@ for rec_trans in ['raw_', 'ms_', 'spont_sub_'][1:2]:
                 sresp[1, n, :] = resp[i2, :]
 
         # remove image responses without two repeats
-        sresp = sresp[:,~inan,:]
+        sresp = sresp[:,~inan,:]#responses go up to ~1e3, scaling for numerical issues when calculating eigenmoments
         da = xr.DataArray(sresp, dims=('rep', 'stim', 'unit'),
                      coords=[range(2), img_inds, range(sresp.shape[-1])])
 
