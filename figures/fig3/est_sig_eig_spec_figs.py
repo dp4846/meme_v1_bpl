@@ -12,9 +12,6 @@ from tqdm import tqdm
 from scipy.stats import multivariate_normal as mn
 sys.path.append('../../src/')
 import eig_mom as em
-def rescale_eig_mom(eig_moms, c):
-    #if your data was divided by c then to get the scaling of the eigenmoments use this function
-    return [eig_mom*(c)**(-(i+1)*2.) for i, eig_mom in enumerate(eig_moms)]
 
 with open('../../data/data_dir.txt', 'r') as file:
     data_dir = file.read()
@@ -83,8 +80,8 @@ eig_mom = mom_est.loc[nm][:k_moms]
 eig_mom_bs = mom_dist.loc[nm][..., :k_moms]
 eig_ind = np.arange(1, k_moms+1)
 
-eig_mom = rescale_eig_mom(eig_mom, scale**(-1))
-eig_mom_bs_resc = np.array([rescale_eig_mom(eig_mom_bs[i], scale**(-1)) for i in range(eig_mom_bs.shape[0])])
+eig_mom = em.rescale_eig_mom(eig_mom, scale**(-1))
+eig_mom_bs_resc = np.array([em.rescale_eig_mom(eig_mom_bs[i], scale**(-1)) for i in range(eig_mom_bs.shape[0])])
 
 #%% FIG 3E-H
 eig_nms = ['cvPCA power law', 'MEME power law', 'MEME broken power law']
