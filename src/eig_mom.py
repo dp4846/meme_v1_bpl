@@ -129,6 +129,10 @@ def n_obs_needed_to_whiten_d_dims(d_dims):
     n = int(10*d_dims*np.log(d_dims))
     return n
 
+def rescale_eig_mom(eig_moms, c):
+    #if your data was multiplied by c then use this to invert
+    return [eig_mom*(c)**(-(i+1)*2.) for i, eig_mom in enumerate(eig_moms)]
+
 def raw_to_central(mu_raw):
     mean = mu_raw[0] # the mean is the first raw moment
     mu_N_cs = np.zeros(len(mu_raw)) # initialize the central moments
@@ -229,7 +233,7 @@ def bs_eig_mom(Y_r, k_moms, n_samps=None):
         n_samps = n_obs_needed_to_whiten_d_dims(k_moms)
     n_stim= np.shape(Y_r)[1]
     Hs = np.zeros((n_samps, k_moms))
-    for i in (range(n_samps)):
+    for i in tqdm(range(n_samps)):
         stim_resamp = np.random.choice(n_stim, replace=True, size=n_stim)
         b_Y_r = Y_r[:, stim_resamp]
         H = signal_er_eig_momk_centered(b_Y_r[0], b_Y_r[1], k_moms=k_moms)
@@ -276,7 +280,7 @@ def bs_eig_mom_cov_W(Y_r=None, k_moms=None, n_samps=None, return_W=False,
         return bC
 
 def fit_broken_power_law_meme_W(Y_r, k_moms, break_points, log_c1, slopes,
-                                 return_res=False, W=None, transform='raw',
+                                 return_full_res=False, W=None, transform='raw',
                                  bs_est_eig=None, est_eig_mom=None):
     '''
     Parameters
@@ -340,7 +344,7 @@ def fit_broken_power_law_meme_W(Y_r, k_moms, break_points, log_c1, slopes,
                             ftol=None,
                             gtol=None)
 
-    if return_res:
+    if return_full_res:
         return res_S
     else:
         return res_S.x
@@ -366,9 +370,9 @@ def break_point_search_fit_broken_power_law_meme(Y_r, k_moms, all_break_points, 
 
     # then fit broken power law for each set of breaks
     fit_results = []
-    for i, break_points in tqdm(enumerate(all_break_points)):
+    for break_points in tqdm(all_break_points):
         res  = fit_broken_power_law_meme_W(Y_r, k_moms, break_points, log_c1, slopes,
-                                 return_res=True, W=W, transform=transform,
+                                 return_full_res=True, W=W, transform=transform,
                                   est_eig_mom=est_eig_mom)
         fit_results.append(res)
     
