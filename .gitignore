@@ -2,4 +2,8 @@
 *.pdf
 *.png
 *.nc
-
+*.npy
+*.mat
+*.csv
+*.DS_Store
+src/__pycache__/eig_mom.cpython-39.pyc
