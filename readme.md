@@ -1,4 +1,4 @@
-# Code: The geometry of representation in mouse visual cortex obeys a broken power law
+# Code: Revisiting the high-dimensional geometry of population responses in visual cortex
 
 ## Overall organization of code
 Top level directory is: ./meme_v1_bpl/. The three directories below it are:
@@ -7,7 +7,7 @@ Top level directory is: ./meme_v1_bpl/. The three directories below it are:
     - contains the main function used to analyse and simulate, including the cvPCA estimator and MEME estimator. 
 
 - `data/` 
-    - contains the scripts to generate files that one might keep on a separate drive or download directly instead of generating themselves. Within this folder is a text file 'data_dir' that has the full path to the directory, '/stringer_2019/' which contains all large data files including the original data from the Stringer 2019.
+    - contains large data files and the scripts for slower processing steps. In `stringer_2019` is the original data from the paper in the folder `orig_stringer2019_data`. `processed_data` is the processed data from the original data using scripts in this folder. 
 
 - `figures/` 
     - Has a folder for each figure in the paper (5) and within each are scripts that either generate figures or data. The data scripts have '_data' appended to them and take a non-neglibible amount of time to run and then save processed data or simulation results directly into the figure folder.  The figure files have '_fig' appended to them and they read in this processed data to generate figures for the paper. The comments in these figure scripts indicate the panel being saved (e.g., Fig 2A). 
@@ -97,6 +97,7 @@ Also, plots example gabors for visualization `'example_gabor_filters.pdf'`.
 ### GENERAL TODO
 
 I am currently just making sure all figures can be made and noting where data should be coming from and putting it all into _data files. text with a check box is a todo item.
+- [ ] update code to use data folder
 - [ ] check that using raw neural data works
 - [ ] put all definitions into src
 - [ ] put RFs and directories into src
