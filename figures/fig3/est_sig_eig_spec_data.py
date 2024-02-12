@@ -30,8 +30,7 @@ fn_nms = [fns[rec].split('/')[-1].split('.')[0] for rec in range(n_rec)]
 for rec in fn_nms:
     n_neurs.append(xr.open_dataset(resp_data_dir + rec + '.nc')['resp'][..., ::sub_samp].shape)
 max_n_neurs = np.max(n_neurs)#the number of neurons in the largest recording
-#this is the number of eigenvalues we will be able to estimate
-#so xarray has to be this big
+#this is the number of eigenvalues we will be able to estimate so xarray has to be this big
 #eigenspectra will be estimated for each of the estimators below
 pl_fit_types = ['cvpca', 'fit_cvpca_w', 'fit_cvpca_no_w',
                 'pl_b0_raw', 'pl_b1_raw',]
@@ -67,9 +66,9 @@ mom_dist = xr.DataArray(np.zeros((n_rec, n_bs_samps, k_moms, )),
 sub_sample = 1#this is just for debugging, to run without the full data set
 run_mom_est = False #this will ignore any mom_est and mom_dist files that already exist
 #check if mom_dist and mom_est files already exist
-if os.path.isfile('./mom_dist.nc') and not run_mom_est:
-    mom_dist = xr.open_dataarray('./mom_dist.nc')
-    mom_est = xr.open_dataarray('./mom_est.nc')
+if os.path.isfile('./mom_dist_raw.nc') and not run_mom_est:
+    mom_dist = xr.open_dataarray('./mom_dist_raw.nc')
+    mom_est = xr.open_dataarray('./mom_est_raw.nc')
 else:
     for rec in tqdm(list(mom_dist.coords['recording'].values)):
         # print recording file name
@@ -92,9 +91,10 @@ else:
 
 # %% eigenspectra parameter estimation using cvPCA and MEME
 trans_type = 'raw'
-do_cvPCA = True
+do_cvPCA = False
 do_meme = True
 init_slope = 0.01
+
 n_breaks = 50
 k_moms_fit = 10
 for rec in tqdm(list(res_df.index.values)):
@@ -142,10 +142,10 @@ for rec in tqdm(list(res_df.index.values)):
         init_log_c1 = np.log(1/n_neur)
         res = em.fit_broken_power_law_meme_W(Y_r, k_moms_fit, break_points,
                                                 init_log_c1, slopes,
-                                                return_res=False, W=W, 
+                                                return_full_res=True, W=W, 
                                                 transform=trans_type,
                                                 est_eig_mom=est_eig_mom)
-        log_c1, alpha_1 = res
+        log_c1, alpha_1 = res.x
         res_df.loc[rec, ['pl_b0_' + trans_type + '_log_c1',
                             'pl_b0_' + trans_type + '_alpha1',]] = log_c1, alpha_1
         print('finished pl_b0')
@@ -155,7 +155,7 @@ for rec in tqdm(list(res_df.index.values)):
         search_break_points_list = [[break_point,] for break_point in search_break_points]
         params, b1 = em.break_point_search_fit_broken_power_law_meme(Y_r, k_moms_fit, 
                                         search_break_points_list, init_log_c1, slopes,
-                                        return_res=False, W=W, transform='raw',
+                                        return_full_res=False, W=W, transform='raw',
                                         bs_est_eig=bs_est_eig, est_eig_mom=est_eig_mom)
 
         log_c1, alpha_1, alpha_2 = params
@@ -175,7 +175,6 @@ res_df = res_df.reset_index()
 res_df = res_df.rename(columns={'index': 'recording'})
 #save the results
 res_df.to_csv('str_pt_estimates_raw.csv')
-
 
 
 # %%
