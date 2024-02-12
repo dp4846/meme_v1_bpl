@@ -12,8 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import scipy.io as sio
-fig_dir = './'
-data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
+data_dir = '../../data/stringer_2019/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
@@ -48,7 +47,7 @@ plt.xticks([]);plt.yticks([])
 #change background to black
 plt.gca().set_facecolor('k')#set background to black
 plt.annotate(fn, xy=(-0.05, -0.05), xycoords='axes fraction', fontsize=3)
-plt.savefig(fig_dir + 'fig3a_example_cell_locs.png', 
+plt.savefig('fig3a_example_cell_locs.png', 
                                 bbox_inches='tight', transparent=False, dpi=300)
 ### fig 3b example response two repeats
 sub_samp = 100
@@ -72,14 +71,14 @@ plt.xticks([]);plt.yticks([])
 plt.imshow(r_sub_norm[1].T, cmap='coolwarm',  vmin=-lim, vmax=lim)
 plt.colorbar()
 plt.annotate(fn, xy=(-0.05, -0.05), xycoords='axes fraction', fontsize=3)
-plt.savefig(fig_dir + 'fig3b_example_resp.pdf', 
+plt.savefig('fig3b_example_resp.pdf', 
                                 bbox_inches='tight', transparent=True)
     
 # fig 3c example image.
 plt.figure(figsize=(4,4))
 plt.imshow(imgs[:, :, 3], cmap='gray')#index 3 has a cool bird.
 plt.xticks([]);plt.yticks([])
-plt.savefig(fig_dir + 'fig3c_example_im.pdf', bbox_inches='tight', transparent=True)
+plt.savefig('fig3c_example_im.pdf', bbox_inches='tight', transparent=True)
 #%%
 # fig 3d population rf
 

@@ -1,6 +1,8 @@
 
 #%%
 import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 import numpy as np
 import pandas as pd
 import os
@@ -29,11 +31,11 @@ for i, sim_df in enumerate(sim_dfs):
 
 # concatentae sim_dfs into a single dataframe with rec as the outer index
 # and the inner index being the simulation number
-sim_df = pd.concat(sim_dfs, keys=nms, names=['fn_nms', 'sim'])
+sim_df = pd.concat(sim_dfs, keys=nms, names=['recording', 'sim'])
 
 cov_types = ['aligned', 'orig', 'ind']
 cov_types = ['aligned', 'ind']
-truth = fit_df.set_index('fn_nms').loc[:, 'fit_cvpca_w_alpha1']
+truth = fit_df.set_index('recording').loc[:, 'fit_cvpca_w_alpha1']
 est_types = ['fit_cvpca_w_alpha1', 'pl_b0_raw_alpha1']
 labels = ['cvPCA', 'MEME']
 
@@ -44,8 +46,8 @@ for j, cov_type in enumerate(cov_types):
     
     for i, est_type in enumerate(est_types):
         nm = est_type + '_SN_cov_' + cov_type
-        y = sim_df.loc[:, nm].groupby('fn_nms').mean()
-        yerr = sim_df.loc[:, nm].groupby('fn_nms').std()
+        y = sim_df.loc[:, nm].groupby('recording').mean()
+        yerr = sim_df.loc[:, nm].groupby('recording').std()
         truth = truth.loc[y.index]
         ax[j].errorbar(x = truth, y=y, 
                         yerr=yerr, fmt='.', label=labels[i], color=colors[i])

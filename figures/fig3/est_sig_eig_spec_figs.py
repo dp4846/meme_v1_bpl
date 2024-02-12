@@ -6,8 +6,10 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 from matplotlib import rc
-from scipy.stats import chi2
 rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+from scipy.stats import chi2
+
+
 from tqdm import tqdm
 from scipy.stats import multivariate_normal as mn
 sys.path.append('../../src/')
@@ -186,7 +188,6 @@ for legends in [True, False]:
 #%% SI for X^2 test
 # first get parameters for each recording: cvPCA, MEME, and MEME with broken power law
 colors = ['blue', 'pink', 'red']
-#fit_df = fit_df.set_index('fn_nms')
 #load the bootstrapped eigenmomemnt distributions
 mom_dist = xr.open_dataarray( './mom_dist.nc')
 mom_est = xr.open_dataarray( './mom_est.nc')

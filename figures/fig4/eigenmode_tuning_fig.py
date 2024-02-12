@@ -6,7 +6,7 @@ import scipy.io as sio
 import xarray as xr
 from tqdm import tqdm
 
-data_dir = '/Volumes/dean_data/neural_data/stringer_2019/'
+data_dir = '../../data/stringer_2019/'
 orig_data_dir = data_dir + 'orig_stringer2019_data/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/'
 eig_tuning_dir = data_dir + 'processed_data/eig_tuning/'

@@ -6,24 +6,10 @@ from tqdm import tqdm
 import scipy.io as sio
 from sklearn.decomposition import TruncatedSVD
 import matplotlib.pyplot as plt
+sys.path.append('../../src/')
+import eig_mom as em
 
-def noise_corr_R2(X, Y, noise_corrected=True):
-    #X is observation x feature
-    #Y is repeat x observation X neuron
-    K, M, N = Y.shape
-    M, D = X.shape
-    Y_m = Y.mean(0)
-    hat_beta = np.linalg.lstsq(X, Y_m, rcond=None)[0]#regression of PCs of images on single units
-    hat_r = X @ hat_beta#predicted responses from linear transform of images
-    rss = ((Y_m - hat_r)**2).sum(0)/(M-D)#residual sum of squares
-    var_r = Y_m.var(0, ddof=1) #estimate total variance of responses
-    linear_var = var_r - rss #estimate of linear variance by subtracting residual variance from total variance
 
-    if noise_corrected:
-        S_var = (var_r - Y.var(0, ddof=1,).mean(0)/K)#signal variance
-        return linear_var / S_var
-    else:
-        return linear_var / var_r
     
 rf_coords = {'ms_natimg2800_M160825_MP027_2016-12-14':[(25, 65), (35, 85)],
              'ms_natimg2800_M161025_MP030_2017-05-29':[(25, 65), (95, 145)],
@@ -46,7 +32,7 @@ sub_sample = 1
 for rec in tqdm(range(len(fns))):
     da = xr.open_dataset(fns[rec])
     fn = fns[rec].split('/')[-1].split('.')[0]
-    r = da['resp'][:, ::sub_sample, ::sub_sample]/1e4   
+    r = da['resp'][:, ::sub_sample, ::sub_sample]   
     n_rep, n_stim, n_neur = r.shape
     r = r - r.mean('stim')
     sig_cov_neur = r[0].values.T @ r[1].values
@@ -59,7 +45,6 @@ for rec in tqdm(range(len(fns))):
 #%% eigenmode linear prediction and filters
 fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if 'natimg2800_M' in fn]
 sub_sample = 1
-imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
 dim_filter_basis = 100 #number of image PCs to use in regression (regression gets noisier with more PCS, we did not find performance improvements beyond ~100)
 imgs = sio.loadmat(orig_data_dir + 'images_natimg2800_all.mat')['imgs']
 dim = 100
@@ -81,7 +66,7 @@ for rec in tqdm(range(len(fns))):
     beta = np.linalg.lstsq(filter_resp, u_r_stim, rcond=None)[0]
     #get the linear prediction
     linear_pred = filter_resp @ beta
-    r2 = noise_corr_R2(filter_resp, u_r_stim[None], noise_corrected=False)
+    r2 = em.noise_corr_R2(filter_resp, u_r_stim[None], noise_corrected=False)
     eig_filters = np.einsum('...ijk,...il->...jkl', filter_pc, beta)
     np.save(eig_tuning_dir + 'eig_rf_est_' + fn + '.npy', eig_filters)
     np.save(eig_tuning_dir + 'eig_lin_resp_' + fn + '.npy', linear_pred)

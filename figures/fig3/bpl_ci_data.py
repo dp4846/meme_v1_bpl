@@ -1,4 +1,4 @@
-# parametric bootstrap just for bpl ci's
+# %%parametric bootstrap just for bpl ci's
 import xarray as xr
 import pandas as pd
 import os
@@ -9,8 +9,7 @@ from tqdm import tqdm
 from scipy.stats import multivariate_normal as mn
 sys.path.append('../../src/')
 import eig_mom as em
-with open('../../data/data_dir.txt', 'r') as file:
-    data_dir = file.read().split('/n')[0]
+data_dir = '../../data/stringer_2019/'
 raw_data_dir =  data_dir + '/processed_data/neural_responses/'
 cov_data_dir = data_dir + '/processed_data/stringer_sn_covs/'
 ci_dir = './bpl2_sims/'
@@ -23,13 +22,12 @@ n_breaks = 50
 initial_break_search_break_points = list(range(2, 50, 2))
 
 # Load CSV with the first column as the index
-fit_df = pd.read_csv('str_pt_estimates.csv', index_col=0).reset_index()
-# Add a label to the first column
-fit_df = fit_df.rename(columns={'index': 'fn_nms'})
+fit_df = pd.read_csv('str_pt_estimates.csv')
+
 
 #if you don't want to use threads (uses more memory but is faster) you can use the following
 for rec in tqdm(range(7)):
-    nm = fit_df['fn_nms'][rec]
+    nm = fit_df['recording'][rec]
     fn = raw_data_dir + nm + '.nc'
     
     #check if you have already run this and start from last completed bootstrap
@@ -66,9 +64,8 @@ for rec in tqdm(range(7)):
     resp = ds[..., :n_neur]
     # in the fitting of eigenmoments we rescaled by the sum of mean signal variances
     #see eig_s
-    scale = ((resp[0]*resp[1]).mean('stim').sum('unit')**.5).values
     # construct signal covariance matrix
-    sig_eig_sc = sig_eig * scale ** 2
+    sig_eig_sc = sig_eig 
     sig_cov_sc_pl = sig_v @ np.diag(sig_eig_sc) @ sig_v.T
     mean = resp.mean('stim').mean('rep').values
 
@@ -78,10 +75,7 @@ for rec in tqdm(range(7)):
     sig = mn.rvs(mean=mean, cov=sig_cov_sc_pl, size=n_stim)      
     Y_r = sig[np.newaxis] + noise
 
-    data_based_scale = (Y_r[:, 0]*Y_r[:, 1]).mean(-2,).sum(-1)**.5
-    Y_r = Y_r/data_based_scale[:, None, None, None]
     slopes = [init_slope, ]*2# initial guess at slope
-    init_log_c1 = np.log(1./n_neur)
     search_break_points = initial_break_search_break_points + [int(break_point) for break_point 
                                 in np.logspace(np.log10(50), 
                                 np.log10(n_neur), 

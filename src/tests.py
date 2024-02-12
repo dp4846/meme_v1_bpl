@@ -97,4 +97,3 @@ plt.xlabel('eigenvalue index')
 plt.ylabel('signal eigenvalue')
 plt.loglog()
 
-# %%

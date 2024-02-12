@@ -14,11 +14,10 @@ import xarray as xr
 import numpy as np
 from tqdm import tqdm
 #go to the data directory and read in data_dir text file to get data_dir
-with open('./data_dir.txt', 'r') as file:
-    data_dir = file.read().split('\n')[0]
+data_dir = './stringer_2019/'
 resp_data_dir = data_dir + 'processed_data/neural_responses/' 
 cov_data_dir = data_dir + 'processed_data/stringer_sn_covs/'
-fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if '.nc' in fn and 'ms' in fn]
+fns = [resp_data_dir + fn for fn in os.listdir(resp_data_dir) if '.nc' in fn and 'raw_' in fn and '0_M' in fn]
 
 #%%
 sub_sample = 1

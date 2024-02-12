@@ -478,3 +478,101 @@ def get_powerlaw(eig_est, trange, weight=True):
     ypred = np.exp((x * b).sum(axis=1))
 
     return ypred, b
+
+def noise_corr_R2(X, Y, noise_corrected=True):
+    #X is observation x feature
+    #Y is repeat x observation X neuron
+    K, M, N = Y.shape
+    M, D = X.shape
+    Y_m = Y.mean(0)
+    hat_beta = np.linalg.lstsq(X, Y_m, rcond=None)[0]#regression of PCs of images on single units
+    hat_r = X @ hat_beta#predicted responses from linear transform of images
+    rss = ((Y_m - hat_r)**2).sum(0)/(M-D)#residual sum of squares
+    var_r = Y_m.var(0, ddof=1) #estimate total variance of responses
+    linear_var = var_r - rss #estimate of linear variance by subtracting residual variance from total variance
+
+    if noise_corrected:
+        S_var = (var_r - Y.var(0, ddof=1,).mean(0)/K)#signal variance
+        return linear_var / S_var
+    else:
+        return linear_var / var_r
+
+def noise_corr_R2(X, Y, noise_corrected=True):
+    #X is observation x feature
+    #Y is repeat x observation X neuron
+    K, M, N = Y.shape
+    M, D = X.shape
+    Y_m = Y.mean(0)
+    Y_m = Y_m - Y_m.mean(0, keepdims=True)#subtract mean response (could include intercept in model)
+    hat_beta = np.linalg.lstsq(X, Y_m, rcond=None)[0]#regression of PCs of images on single units
+    hat_r = X @ hat_beta#predicted responses from linear transform of images
+    rss = ((Y_m - hat_r)**2).sum(0)/(M-D)#residual sum of squares
+    var_r = Y_m.var(0, ddof=1) #estimate total variance of responses
+    linear_var = var_r - rss #estimate of linear variance by subtracting residual variance from total variance
+
+    if noise_corrected:
+        S_var = (var_r - Y.var(0, ddof=1,).mean(0)/K)#signal variance
+        return linear_var / S_var
+    else:
+        return linear_var / var_r
+    
+def hat_snr(x, noise_corrected=True):
+    #x is a 2d array of shape (n_rep, n_stim, ...)
+    n_rep, n_stim = x.shape[:2]
+    noise_var = np.mean(np.var(x, 0, ddof=1), 0)
+    sig_var = np.var(np.mean(x, 0), 0, ddof=0)
+    snr = sig_var/noise_var#raw SNR estimate
+    snr_corr = (sig_var - ((n_stim-1)/n_stim)*noise_var/n_rep)/noise_var #SNR estimate corrected for finite number of trials
+    if noise_corrected:
+        return snr_corr
+    else:
+        return snr
+
+def create_2d_gabor(img_size, sigma, f, theta, phi, center_x, center_y):
+    """
+    Create a 2D Gabor filter.
+
+    Parameters:
+    - img_size: Size of the output Gabor filter (square).
+    - sigma: Standard deviation of the Gaussian envelope.
+    - gamma: Aspect ratio that controls the ellipticity of the Gaussian envelope.
+    - f: Spatial frequency of the cosine factor.
+    - theta: Orientation of the Gabor filter in radians.
+    - phi: Phase offset.
+
+    Returns:
+    - gabor_filter: 2D Gabor filter of the specified parameters.
+    """
+
+    x = np.linspace(-img_size // 2, img_size // 2, img_size) - center_x
+    y = np.linspace(-img_size // 2, img_size // 2, img_size) - center_y
+    x, y = np.meshgrid(x, y) 
+
+    x_theta = x * np.cos(theta) + y * np.sin(theta)
+    y_theta = -x * np.sin(theta) + y * np.cos(theta)
+
+    gabor_real = np.exp(-0.5 * (x_theta**2 + y_theta**2) / (sigma**2)) * np.cos(2 * np.pi * f * x_theta + phi)
+    return gabor_real
+
+# function for making gabors
+def make_gabor_filters(img_size=60, scales=[1, 0.5, 0.25, ], thetas=[0., 0.78, 1.57, 2.35]):
+    inds = []
+    filters = []
+    for scale in tqdm(scales):
+        sigma = scale * img_size / 4
+        f = 1 / (scale * img_size / 2)
+        steps_x = steps_y =  np.linspace(scale*img_size/2, img_size - scale*img_size/2, int(1/scale)) - img_size/2
+        #increase number of steps so that there is half overlap
+        if scale<1:
+            steps_x = steps_y =  np.linspace(scale*img_size/2, img_size - scale*img_size/2, int(1./scale)) - img_size/2
+        for step_x in steps_x:
+            for step_y in steps_y:
+                for theta in (thetas):
+                    for phase in [0, np.pi/2]:
+                        gabor_filter = create_2d_gabor(img_size, sigma, f, theta, phase, center_x=step_x, center_y=step_y)
+                        filters.append(gabor_filter)
+                        inds.append(np.array([scale, step_x, step_y, theta, phase,]))
+    filters_gabor = np.array(filters)
+    gab_inds = np.array(inds)
+    print('number of gabors: ' + str(len(filters_gabor)))
+    return filters_gabor, gab_inds

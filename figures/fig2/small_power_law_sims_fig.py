@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 import sys
 sys.path.append('../../src/')
 import eig_mom as em

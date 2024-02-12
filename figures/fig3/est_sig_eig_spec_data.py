@@ -67,8 +67,8 @@ sub_sample = 1#this is just for debugging, to run without the full data set
 run_mom_est = False #this will ignore any mom_est and mom_dist files that already exist
 #check if mom_dist and mom_est files already exist
 if os.path.isfile('./mom_dist_raw.nc') and not run_mom_est:
-    mom_dist = xr.open_dataarray('./mom_dist_raw.nc')
-    mom_est = xr.open_dataarray('./mom_est_raw.nc')
+    mom_dist = xr.open_dataarray('./mom_dist.nc')
+    mom_est = xr.open_dataarray('./mom_est.nc')
 else:
     for rec in tqdm(list(mom_dist.coords['recording'].values)):
         # print recording file name
@@ -76,15 +76,14 @@ else:
         #load data
         ds = xr.open_dataset(resp_data_dir + rec + '.nc')
         resp = ds['resp'][..., ::sub_sample]
-        resp = resp/(resp[0]*resp[1]).mean('stim').sum('unit')**.5
         #estimate eigenmoments
         mom_est.loc[rec] = em.signal_er_eig_momk_centered(resp[0].values, resp[1].values, k_moms)
         #bootstrap eigenmoment distribution
         mom_dist.loc[rec] = em.bs_eig_mom(resp.values, k_moms, n_bs_samps)
 
     if sub_sample ==1:    
-        mom_dist.to_netcdf('./mom_dist_raw.nc' )
-        mom_est.to_netcdf('./mom_est_raw.nc' )
+        mom_dist.to_netcdf('./mom_dist.nc' )
+        mom_est.to_netcdf('./mom_est.nc' )
     else:#this was just for debugging
         mom_dist.to_netcdf('./mom_dist_sub_samp_' + str(sub_sample) + '.nc' )
         mom_est.to_netcdf('./mom_est_sub_samp_' + str(sub_sample) + '.nc' )
@@ -102,7 +101,7 @@ for rec in tqdm(list(res_df.index.values)):
     #cvPCA estimated power law
     ds = xr.open_dataset(resp_data_dir + rec + '.nc')
     Y_r = ds['resp'][..., ::sub_samp]
-    Y_r = Y_r/(Y_r[0]*Y_r[1]).mean('stim').sum('unit')**.5 #rescale by estimate of total signal variance
+    Y_r = Y_r
     if do_cvPCA:
         Y_r = Y_r.values
     n_rep,  n_stim, n_neur = Y_r.shape
@@ -169,12 +168,12 @@ for rec in tqdm(list(res_df.index.values)):
         print('finished pl_b1')
 
 
-    res_df.to_csv('str_pt_estimates_raw.csv')
+    res_df.to_csv('str_pt_estimates.csv')
 #reset the index and make the recording names a column in the dataframe as fn_nms
 res_df = res_df.reset_index()
 res_df = res_df.rename(columns={'index': 'recording'})
 #save the results
-res_df.to_csv('str_pt_estimates_raw.csv')
+res_df.to_csv('str_pt_estimates.csv')
 
 
 # %%

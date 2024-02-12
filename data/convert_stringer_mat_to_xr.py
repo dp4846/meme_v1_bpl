@@ -14,8 +14,7 @@ import os
 import xarray as xr
 from tqdm import tqdm
 import pandas as pd
-with open('./data_dir.txt', 'r') as file:
-    data_dir = file.read()
+data_dir = './stringer_2019/'
 #check if processed_data folder exists, if not make it and all the other data folders
 if not os.path.exists(data_dir + '/processed_data/'):
     os.makedirs(data_dir + '/processed_data/')
